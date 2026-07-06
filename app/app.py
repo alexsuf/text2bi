@@ -59,18 +59,23 @@ def login_required():
 
 
 def menu_items():
-    return [
+    items = [
         {"href": "/", "icon": "bi-search", "label": "Запрос"},
         {"href": "/chat", "icon": "bi-chat-dots", "label": "Чат-бот"},
         {"href": "/graf", "icon": "bi-bar-chart", "label": "График"},
         {"href": "/table", "icon": "bi-table", "label": "Таблица"},
-        {"href": "/config", "icon": "bi-sliders", "label": "Параметры"},
-        {"href": "/connections", "icon": "bi-plug", "label": "Подключения"},
-        {"href": "/prompts", "icon": "bi-file-text", "label": "Промпты"},
-        {"href": "/providers", "icon": "bi-cloud", "label": "Провайдеры"},
-        {"href": "/models", "icon": "bi-cpu", "label": "Модели"},
-        {"href": "/fallbacks", "icon": "bi-arrow-repeat", "label": "Фолбэки"},
     ]
+    if current_user():
+        items.extend([
+            {"href": "/colors", "icon": "bi-palette", "label": "Цвета"},
+            {"href": "/config", "icon": "bi-sliders", "label": "Параметры"},
+            {"href": "/connections", "icon": "bi-plug", "label": "Подключения"},
+            {"href": "/prompts", "icon": "bi-file-text", "label": "Промпты"},
+            {"href": "/providers", "icon": "bi-cloud", "label": "Провайдеры"},
+            {"href": "/models", "icon": "bi-cpu", "label": "Модели"},
+            {"href": "/fallbacks", "icon": "bi-arrow-repeat", "label": "Фолбэки"},
+        ])
+    return items
 
 
 def llm_complete(messages, timeout=LLM_TIMEOUT):
