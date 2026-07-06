@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Модели{% endblock %}
+{% block content %}
+<h2 class="mb-4">{% if model %}Изменить модель{% else %}Новая модель{% endif %}</h2>
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            <div class="mb-3"><label class="form-label">Провайдер</label>
+                <select name="provider_id" class="form-select" required>
+                    {% for p in providers %}<option value="{{ p.id }}" {% if model and model.provider_id|string == p.id|string %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="mb-3"><label class="form-label">Имя модели (model_name)</label><input type="text" name="model_name" class="form-control" value="{{ model.model_name if model else '' }}" required></div>
+            <div class="mb-3"><label class="form-label">Отображаемое имя</label><input type="text" name="display_name" class="form-control" value="{{ model.display_name if model else '' }}"></div>
+            <div class="row">
+                <div class="col-md-3 mb-3"><label class="form-label">Контекст</label><input type="number" name="context_size" class="form-control" value="{{ model.context_size if model else '' }}"></div>
+                <div class="col-md-3 mb-3"><label class="form-label">Макс. токенов</label><input type="number" name="max_tokens" class="form-control" value="{{ model.max_tokens if model else '' }}"></div>
+                <div class="col-md-3 mb-3"><label class="form-label">Temperature</label><input type="number" step="0.01" min="0" max="1" name="temperature" class="form-control" value="{{ model.temperature if model else '' }}"></div>
+                <div class="col-md-3 mb-3"><label class="form-label">Таймаут (сек)</label><input type="number" name="timeout" class="form-control" value="{{ model.timeout if model else '180' }}" min="0"></div>
+            </div>
+            <div class="mb-3 form-check"><input type="checkbox" name="enabled" class="form-check-input" id="enabled" {% if not model or model.enabled %}checked{% endif %}><label class="form-check-label" for="enabled">Активна</label></div>
+            <div class="mb-3 form-check"><input type="checkbox" name="is_default" class="form-check-input" id="is_default" {% if model and model.is_default %}checked{% endif %}><label class="form-check-label" for="is_default">По умолчанию</label></div>
+            <div class="d-flex gap-2"><button type="submit" class="btn btn-primary">Сохранить</button><a href="/models" class="btn btn-secondary">Отмена</a></div>
+        </form>
+    </div>
+</div>
+{% endblock %}

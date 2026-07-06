@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Провайдеры{% endblock %}
+{% block content %}
+<h2 class="mb-4">{% if provider %}Изменить провайдера{% else %}Новый провайдер{% endif %}</h2>
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            <div class="mb-3"><label class="form-label">Название</label><input type="text" name="name" class="form-control" value="{{ provider.name if provider else '' }}" required></div>
+            <div class="mb-3"><label class="form-label">Тип провайдера</label>
+                <select name="provider_type" class="form-select" required>
+                    <option value="openai" {% if provider and provider.provider_type=='openai' %}selected{% endif %}>OpenAI</option>
+                    <option value="anthropic" {% if provider and provider.provider_type=='anthropic' %}selected{% endif %}>Anthropic</option>
+                    <option value="ollama" {% if provider and provider.provider_type=='ollama' %}selected{% endif %}>Ollama</option>
+                    <option value="custom" {% if provider and provider.provider_type=='custom' %}selected{% endif %}>Custom</option>
+                </select>
+            </div>
+            <div class="mb-3"><label class="form-label">Base URL</label><input type="url" name="base_url" class="form-control" value="{{ provider.base_url if provider else '' }}" required></div>
+            <div class="mb-3"><label class="form-label">API Key {% if provider %}<small class="text-muted">(оставьте пустым чтобы не менять)</small>{% endif %}</label><input type="password" name="api_key" class="form-control" value="" placeholder="{% if provider %}оставьте пустым чтобы не менять{% endif %}" autocomplete="off"></div>
+            <div class="mb-3 form-check"><input type="checkbox" name="enabled" class="form-check-input" id="enabled" {% if not provider or provider.enabled %}checked{% endif %}><label class="form-check-label" for="enabled">Активен</label></div>
+            <div class="d-flex gap-2"><button type="submit" class="btn btn-primary">Сохранить</button><a href="/providers" class="btn btn-secondary">Отмена</a></div>
+        </form>
+    </div>
+</div>
+{% endblock %}

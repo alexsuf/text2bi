@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Подключения{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Подключения к БД витрин</h2>
+</div>
+<div class="card">
+    <div class="card-body">
+        {% if connections %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead><tr><th>Хост</th><th>База</th><th>Пользователь</th><th>По умолчанию</th><th class="text-end">Действия</th></tr></thead>
+                <tbody>{% for c in connections %}<tr>
+                    <td>{{ c.host }}:{{ c.port }}</td><td>{{ c.database_name }}</td><td>{{ c.username }}</td>
+                    <td>{% if c.is_default %}<span class="badge bg-success">да</span>{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                    <td class="text-end">
+                        <a href="/connections/edit/{{ c.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteConn({{ c.id }})"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>{% endfor %}</tbody>
+            </table>
+        </div>
+        {% else %}<p class="text-muted text-center py-4">Нет подключений</p>{% endif %}
+        <hr>
+        <h5>Добавить подключение</h5>
+        <form class="row g-3 mb-0" id="connForm">
+            <div class="col-md-2"><label class="form-label">Host</label><input name="host" class="form-control" value="host.docker.internal" required></div>
+            <div class="col-md-1"><label class="form-label">Port</label><input name="port" class="form-control" type="number" value="5432"></div>
+            <div class="col-md-2"><label class="form-label">Database</label><input name="database_name" class="form-control" value="dash" required></div>
+            <div class="col-md-2"><label class="form-label">User</label><input name="username" class="form-control" value="postgres" required></div>
+            <div class="col-md-2"><label class="form-label">Password</label><input name="password" class="form-control" type="password" value="secret" required></div>
+            <div class="col-md-2"><div class="form-check mt-4"><input type="checkbox" name="is_default" class="form-check-input" id="is_default"><label class="form-check-label" for="is_default">По умолчанию</label></div></div>
+            <div class="col-md-1 d-flex align-items-end"><button type="submit" class="btn btn-primary w-100">Добавить</button></div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function deleteConn(id) {
+    if (!confirm('Удалить подключение?')) return;
+    await fetch('/api/connections/' + id, {method:'DELETE'});
+    location.reload();
+}
+document.getElementById('connForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const fd = new FormData(this);
+    const data = Object.fromEntries(fd);
+    data.port = parseInt(data.port) || 5432;
+    data.is_default = fd.has('is_default');
+    const r = await fetch('/api/connections', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    const d = await r.json();
+    if (d.status==='ok') location.reload(); else alert(d.message||'Ошибка');
+});
+</script>
+{% endblock %}

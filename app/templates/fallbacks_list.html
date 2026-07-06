@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Фолбэки{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Фолбэки моделей</h2>
+    <a href="/fallbacks/create" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Добавить фолбэк</a>
+</div>
+<div class="card">
+    <div class="card-body">
+        {% if relations %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead><tr><th>#</th><th>Основная модель</th><th>Фолбэк модель</th><th>Приоритет</th><th class="text-end">Действия</th></tr></thead>
+                <tbody>{% for rel in relations %}{% set m = model_map.get(rel.model_id|string) %}{% set fb = model_map.get(rel.fallback_model_id|string) %}
+                <tr>
+                    <td>{{ rel.relation_number }}</td>
+                    <td><span class="badge bg-warning text-dark">{{ m.provider.name if m and m.provider else '-' }} — {{ m.display_name or m.model_name if m else rel.model_id }}</span></td>
+                    <td><span class="badge bg-success">{{ fb.provider.name if fb and fb.provider else '-' }} — {{ fb.display_name or fb.model_name if fb else rel.fallback_model_id }}</span></td>
+                    <td>{{ rel.priority }}</td>
+                    <td class="text-end">
+                        <form action="/fallbacks/delete/{{ rel.id }}" method="post" class="d-inline mb-0" onsubmit="return confirm('Удалить фолбэк?')"><button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+                    </td>
+                </tr>{% endfor %}</tbody>
+            </table>
+        </div>
+        {% else %}<p class="text-muted text-center py-4">Нет фолбэков</p>{% endif %}
+    </div>
+</div>
+{% endblock %}

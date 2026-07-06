@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Выполнение SQL</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        body {
+            padding: 20px;
+        }
+
+        h2 {
+            color: var(--text-accent);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .sql-display {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-default);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            color: var(--text-primary);
+        }
+
+        .sql-display-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .result-table th,
+        .result-table td {
+            border: 1px solid var(--border-table);
+            padding: 8px 10px;
+            text-align: left;
+        }
+
+        .result-table th {
+            background: var(--bg-table-header);
+            color: var(--text-accent);
+            font-weight: 600;
+        }
+
+        .result-table tr:nth-child(even) {
+            background: var(--bg-table-alt);
+        }
+
+        .error-block {
+            background: var(--bg-error-block);
+            border: 1px solid var(--border-error);
+            border-radius: 12px;
+            padding: 18px;
+            margin-top: 15px;
+        }
+
+        .error-block h3 {
+            color: var(--text-error);
+            margin-top: 0;
+        }
+
+        .error-text {
+            color: var(--text-error-bright);
+            white-space: pre-wrap;
+            margin-bottom: 15px;
+        }
+
+        .no-data {
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 20px;
+            font-style: italic;
+        }
+
+        .meta-info {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: left;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: var(--text-link);
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            color: var(--text-link-hover);
+            text-decoration: underline;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <h2>📊 Выполнение SQL-запроса</h2>
+
+    <div class="sql-display">
+        <div class="sql-display-label">SQL-запрос:</div>
+        <code>{{ sql_query }}</code>
+    </div>
+
+    {% if error %}
+
+    <div class="error-block">
+        <h3>❌ Ошибка выполнения</h3>
+        <div class="error-text">{{ error }}</div>
+
+        {% if analysis %}
+        <div style="
+            background:var(--bg-analysis);
+            border-radius:10px;
+            padding:18px;
+            color:var(--text-primary);
+            line-height:1.6;
+        ">
+            {{ analysis|safe }}
+        </div>
+        {% endif %}
+    </div>
+
+    {% elif result and result.rows %}
+
+    <table class="result-table">
+        <thead>
+            <tr>
+                {% for col in result.columns %}
+                <th>{{ col }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in result.rows %}
+            <tr>
+                {% for value in row %}
+                <td>{{ value }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="meta-info">
+        ✅ Найдено строк: <strong>{{ result.rows|length }}</strong>
+    </div>
+
+    {% else %}
+
+    <div class="no-data">
+        Нет SQL-запроса для выполнения.
+    </div>
+
+    {% endif %}
+
+    <hr style="margin-top:30px; border-color:var(--border-light);">
+
+    <a href="javascript:window.close();" class="back-link">✖ Закрыть вкладку</a>
+
+</body>
+</html>

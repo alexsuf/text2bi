@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Модели{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>LLM Модели</h2>
+    <a href="/models/create" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Создать модель</a>
+</div>
+<div class="card">
+    <div class="card-body">
+        {% if models %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead><tr><th>#</th><th>Модель</th><th>Провайдер</th><th>Temp</th><th>Таймаут</th><th>Статус</th><th class="text-end">Действия</th></tr></thead>
+                <tbody>{% for m in models %}<tr>
+                    <td>{{ m.model_number }}</td>
+                    <td><strong>{{ m.display_name or m.model_name }}</strong><br><small class="text-muted">{{ m.model_name }}</small></td>
+                    <td><span class="badge bg-info">{{ m.provider.name if m.provider else m.provider_id }}</span></td>
+                    <td>{{ m.temperature or '-' }}</td>
+                    <td>{{ m.timeout }}с</td>
+                    <td>{% if m.enabled %}<span class="badge bg-success">Включена</span>{% else %}<span class="badge bg-secondary">Выключена</span>{% endif %}{% if m.is_default %} <span class="badge bg-primary">по умолч.</span>{% endif %}</td>
+                    <td class="text-end">
+                        <a href="/models/edit/{{ m.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                        <form action="/models/delete/{{ m.id }}" method="post" class="d-inline mb-0" onsubmit="return confirm('Удалить модель?')"><button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+                    </td>
+                </tr>{% endfor %}</tbody>
+            </table>
+        </div>
+        {% else %}<p class="text-muted text-center py-4">Нет моделей</p>{% endif %}
+    </div>
+</div>
+{% endblock %}

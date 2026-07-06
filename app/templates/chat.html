@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Чат-бот{% endblock %}
+{% block extra_css %}
+.cards { display:flex; gap:16px; margin-bottom:16px; }
+.card { background:#fff; border:none; border-radius:10px; padding:16px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+.chat-messages { flex:1; overflow-y:auto; max-height:calc(100vh - 280px); padding:8px 0; }
+.msg { margin-bottom:12px; padding:10px 14px; border-radius:8px; max-width:85%; font-size:14px; line-height:1.5; }
+.msg.user { background:#0d6efd; color:#fff; margin-left:auto; }
+.msg.assistant { background:#f8f9fa; border:1px solid #e9ecef; color:#212529; }
+.msg-label { font-size:11px; color:#6c757d; margin-bottom:4px; text-transform:uppercase; }
+.msg .markdown-content code { background:#e9ecef; padding:2px 6px; border-radius:3px; font-size:13px; }
+.msg .markdown-content pre { background:#e9ecef; padding:12px; border-radius:6px; overflow-x:auto; position:relative; }
+.msg .markdown-content table { border-collapse:collapse; width:100%; margin:8px 0; }
+.msg .markdown-content th, .msg .markdown-content td { border:1px solid #dee2e6; padding:4px 8px; font-size:12px; }
+.msg .markdown-content th { background:#f1f3f5; }
+.sql-preview { background:#f8f9fa; border:1px solid #e9ecef; border-radius:6px; padding:6px 12px; font-family:monospace; font-size:12px; color:#055160; max-width:500px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.input-area { display:flex; gap:8px; align-items:flex-end; padding-top:12px; border-top:1px solid #e9ecef; }
+.input-area textarea { flex:1; background:#fff; border:1px solid #ced4da; border-radius:6px; color:#212529; padding:10px; font-size:14px; resize:none; min-height:40px; max-height:100px; }
+.input-area textarea:focus { border-color:#0d6efd; box-shadow:0 0 0 0.2rem rgba(13,110,253,0.15); outline:none; }
+.mic-btn { width:40px; height:40px; border-radius:8px; border:1px solid #ced4da; background:#fff; color:#0d6efd; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; }
+.mic-btn.recording { background:#dc3545; border-color:#dc3545; color:#fff; animation:pulse 1.5s infinite; }
+@keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(220,53,69,.5)} 70%{box-shadow:0 0 0 10px rgba(220,53,69,0)} 100%{box-shadow:0 0 0 0 rgba(220,53,69,0)} }
+.typing { display:flex; gap:4px; padding:10px; }
+.typing span { width:8px; height:8px; background:#0d6efd; border-radius:50%; animation:typing 1s infinite; }
+.typing span:nth-child(2) { animation-delay:.2s; }
+.typing span:nth-child(3) { animation-delay:.4s; }
+@keyframes typing { 0%,100%{opacity:.2} 50%{opacity:1} }
+.copy-btn { position:absolute; top:6px; right:6px; background:#e9ecef; border:none; color:#6c757d; cursor:pointer; padding:2px 8px; border-radius:4px; font-size:11px; }
+.copy-btn:hover { color:#0d6efd; }
+.run-btn { position:absolute; top:6px; right:70px; background:#198754; border:none; color:#fff; cursor:pointer; padding:2px 8px; border-radius:4px; font-size:11px; }
+.run-btn:hover { background:#157347; }
+{% endblock %}
+
+{% block content %}
+<div class="cards">
+    <div style="flex:1"><h2 style="color:#1a1e2e;font-size:18px;margin:0 0 4px 0;">Чат-бот</h2><span style="color:#6c757d;font-size:12px;">Модель: {{ llm_model }}</span></div>
+    <div><span style="color:#6c757d;font-size:11px;text-transform:uppercase;">SQL-контекст</span><div class="sql-preview" id="sqlPreview" title="{{ sql_query }}">{{ sql_query[:80] }}{% if sql_query|length>80 %}...{% endif %}</div></div>
+</div>
+<div class="card" style="display:flex;flex-direction:column;">
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="input-area">
+        <button class="mic-btn" id="micBtn" title="Голосовой ввод">🎤</button>
+        <textarea id="chatInput" placeholder="Задайте вопрос..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ask();}"></textarea>
+        <button class="btn" id="askBtn" onclick="ask()" style="height:40px; background:#0d6efd; color:#fff; border:none; border-radius:6px; padding:8px 20px; cursor:pointer; font-weight:500;">Спросить</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='export-utils.js') }}"></script>
+<script>
+let sqlQuery = {{ sql_query|tojson }} || "";
+let history = [];
+let lastSqlResult = null;
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null, isRecording = false, fullVoiceText = '';
+async function requestMic() { try { const s = await navigator.mediaDevices.getUserMedia({audio:true}); s.getTracks().forEach(t=>t.stop()); return true; } catch(e) { return false; } }
+document.getElementById('micBtn').onclick = async function() {
+    if (!SpeechRecognition) { alert('Web Speech API не поддерживается'); return; }
+    if (isRecording) { isRecording=false; if(recognition) recognition.stop(); this.classList.remove('recording'); return; }
+    if (!await requestMic()) { alert('Доступ к микрофону запрещён'); return; }
+    recognition = new SpeechRecognition(); recognition.lang='ru-RU'; recognition.interimResults=true; recognition.continuous=true;
+    let silence; function resetSilence(){clearTimeout(silence);silence=setTimeout(()=>recognition.stop(),7000);}
+    recognition.onresult = function(e) { resetSilence(); let f='', inter=''; for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)f+=e.results[i][0].transcript;else inter+=e.results[i][0].transcript;} if(f){fullVoiceText+=' '+f;document.getElementById('chatInput').value=fullVoiceText.trim();} else document.getElementById('chatInput').value=fullVoiceText.trim()+' '+inter; };
+    recognition.onend = () => { if(isRecording) setTimeout(()=>{try{recognition.start();resetSilence();}catch(e){}},400); };
+    try { recognition.start(); resetSilence(); isRecording=true; this.classList.add('recording'); fullVoiceText = document.getElementById('chatInput').value; } catch(e) { console.error(e); }
+};
+function addMsg(role, content, isHtml) {
+    const c = document.getElementById('chatMessages'); const d = document.createElement('div'); d.className='msg '+role;
+    if (role==='assistant') { const l=document.createElement('div'); l.className='msg-label'; l.textContent='Ассистент'; d.appendChild(l); }
+    const t = document.createElement('div');
+    if (isHtml) { t.className='markdown-content'; t.innerHTML=content;
+        t.querySelectorAll('pre code').forEach(block => {
+            const pre = block.parentElement; pre.style.position='relative';
+            const copy = document.createElement('button'); copy.className='copy-btn'; copy.textContent='Копировать'; copy.onclick = () => { navigator.clipboard.writeText(block.textContent); copy.textContent='✓'; setTimeout(()=>copy.textContent='Копировать',2000); }; pre.appendChild(copy);
+            const run = document.createElement('button'); run.className='run-btn'; run.textContent='Запустить';
+            run.onclick = async () => { run.textContent='...'; run.disabled=true; try { const r = await fetch('/execute_sql_ajax',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql_query:block.textContent})}); const d = await r.json(); if (d.status==='ok') { sqlQuery=block.textContent; document.getElementById('sqlPreview').textContent=sqlQuery.substring(0,80); updateSqlData(d); } else addMsg('assistant','Ошибка: '+d.message,false); } catch(e) { addMsg('assistant','Ошибка: '+e,false); } run.textContent='Запустить'; run.disabled=false; }; pre.appendChild(run);
+        });
+    } else { t.textContent=content; }
+    d.appendChild(t); c.appendChild(d); c.scrollTop=c.scrollHeight; return d;
+}
+function addTyping() { const d=addMsg('assistant',''); d.className+=' loading-msg'; const ty=document.createElement('div'); ty.className='typing'; ty.innerHTML='<span></span><span></span><span></span>'; d.querySelector('.msg-label').after(ty); return d; }
+function updateSqlData(data) { if (!data.rows||!data.rows.length) return; let t = data.columns.join(' | ')+'\n'+data.columns.map(()=>'---').join(' | ')+'\n'; data.rows.slice(0,50).forEach(r => t += r.join(' | ')+'\n'); lastSqlResult = {columns:data.columns, rows:data.rows, text:t}; }
+async function ask() {
+    const inp = document.getElementById('chatInput'); const q = inp.value.trim(); if (!q) return;
+    addMsg('user', q); inp.value=''; fullVoiceText=''; document.getElementById('askBtn').disabled=true;
+    const typing = addTyping();
+    try { const r = await fetch('/chat_ask', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q, sql_query:sqlQuery, sql_data:lastSqlResult?.text||'', history:history})}); const d = await r.json(); typing.remove(); if (d.status==='ok') { addMsg('assistant', d.answer, true); history.push({role:'user',content:q},{role:'assistant',content:d.answer_raw}); } else addMsg('assistant', 'Ошибка: '+d.message); }
+    catch(e) { typing.remove(); addMsg('assistant', 'Ошибка соединения: '+e); }
+    document.getElementById('askBtn').disabled=false;
+}
+async function loadInitial() {
+    if (!sqlQuery) { addMsg('assistant', '<p style="color:#6c757d">Нет SQL-запроса. Задайте вопрос через поле ввода.</p>', true); return; }
+    const typing = addTyping();
+    try { const r = await fetch('/explain_sql', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql_query:sqlQuery})}); const d = await r.json(); typing.remove(); if (d.status==='ok') addMsg('assistant', d.explanation, true); else addMsg('assistant', d.message); }
+    catch(e) { addMsg('assistant', 'Ошибка соединения: '+e); }
+}
+loadInitial();
+</script>
+{% endblock %}

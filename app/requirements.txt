@@ -1,0 +1,7 @@
+Flask==2.1.2
+flask-wtf
+werkzeug==2.1.0
+pytz==2021.3
+SQLAlchemy==1.4.27
+psycopg2-binary
+python-telegram-bot==20.8

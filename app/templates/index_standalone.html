@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>SQL Чат</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+    <!-- ============================
+         ВЕРХНЯЯ ПАНЕЛЬ: ТЕМА + МОДЕЛЬ + ЗАГОЛОВОК
+         ============================ -->
+    <div class="top-bar">
+        <div class="theme-selector">
+
+                            <button
+                                type="button"
+                                class="btn-chart open-table-btn"
+                            >
+                                📋 Таблица
+                            </button>
+            <label for="themeSelect">🎨 Тема:</label>
+            <select id="themeSelect">
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+                <option value="nord">Nord</option>
+                <option value="solarized">Solarized</option>
+            </select>
+            <span class="model-name">🧠 {{ llm_model }}</span>
+        </div>
+        <h1>SQL Чат с графиками</h1>
+    </div>
+
+    <form id="queryForm" method="POST">
+
+        <div class="container">
+
+            <div class="left">
+
+                <textarea
+                    id="questionBox"
+                    name="question"
+                    placeholder="Опиши свой вопрос..."
+                >{{ question }}</textarea>
+
+                <button
+                    type="submit"
+                    name="action"
+                    value="ask"
+                    class="btn-main"
+                >
+                    Запрос →
+                </button>
+
+                <button
+                    type="button"
+                    id="editBtn"
+                    class="btn-red"
+                >
+                    Редактировать ✏️
+                </button>
+
+                <button
+                    type="button"
+                    id="savePromptBtn"
+                    class="btn-green"
+                >
+                    Сохранить 📌
+                </button>
+
+                <button
+                    type="button"
+                    id="explainSqlBtn"
+                    class="btn-jpg"
+                >
+                    💬 SQL-чат
+                </button>
+
+                <div id="loading">
+                    Загрузка...
+                </div>
+
+                <!-- ===== ТАЙМЕР ===== -->
+                <div class="timer-row">
+                    {% if elapsed_time %}
+                    <span class="timer-text">
+                        Ответ получен за {{ elapsed_time }} секунд ⏱️
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="history" id="history">
+
+                    <h3>История запросов 📝</h3>
+
+                    <ul id="historyList"></ul>
+
+                </div>
+
+            </div>
+
+            <div class="output">
+
+                {% if sql_query %}
+                <div class="block">
+
+                    <h3>SQL-запрос 🔍</h3>
+
+                    <pre id="sqlDisplay">{{ sql_query }}</pre>
+
+                    <textarea
+                        id="sqlEditor"
+                        name="sql_query"
+                        class="sql-textarea"
+                        style="display:none;"
+                    >{{ sql_query }}</textarea>
+
+                    <button
+                        type="submit"
+                        name="action"
+                        value="execute_sql"
+                        id="execBtn"
+                        class="btn-main"
+                        style="display:none;"
+                    >
+                        Выполнить ▶️
+                    </button>
+
+                </div>
+                {% endif %}
+
+                {% if result %}
+                <div class="block" id="resultBlock">
+
+                    <h3>Результат 📊</h3>
+
+                    {% if result.error %}
+
+                    <div style="
+                        background:var(--bg-error-block);
+                        border:1px solid var(--border-error);
+                        border-radius:12px;
+                        padding:18px;
+                        margin-top:15px;
+                    ">
+
+                        <h3 style="color:var(--text-error); margin-top:0;">
+                            SQL-скрипт вызвал ошибку. Анализирую...
+                        </h3>
+
+                        <div style="
+                            color:var(--text-error-bright);
+                            margin-bottom:18px;
+                            white-space:pre-wrap;
+                        ">
+                            {{ result.error }}
+                        </div>
+
+                        {% if analysis %}
+
+                        <div class="markdown-content" style="
+                            background:var(--bg-analysis);
+                            border-radius:10px;
+                            padding:18px;
+                            color:var(--text-primary);
+                            line-height:1.6;
+                        ">
+                            {{ analysis|safe }}
+                        </div>
+
+                        {% endif %}
+
+                    </div>
+
+                    {% elif result.rows %}
+
+                        <div id="tableContainer">
+                            <table id="resultTable">
+
+                                <thead>
+
+                                    <tr>
+
+                                        {% for col in result.columns %}
+                                            <th>{{ col }}</th>
+                                        {% endfor %}
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody id="tableBody">
+
+                                    {% for row in result.rows %}
+
+                                    <tr class="data-row">
+
+                                        {% for value in row %}
+                                            <td>{{ value }}</td>
+                                        {% endfor %}
+
+                                    </tr>
+
+                                    {% endfor %}
+
+                                </tbody>
+
+                            </table>
+                        </div>
+
+                        <!-- Пагинация -->
+                        <div id="pagination" class="pagination" style="display:none; margin-top:15px; text-align:center;">
+                            <button type="button" id="prevPageBtn" class="btn-pag" style="background:var(--gradient-primary); margin-right:10px;">← Назад</button>
+                            <span id="pageInfo" style="color:var(--text-primary); font-size:14px;"></span>
+                            <button type="button" id="nextPageBtn" class="btn-pag" style="background:var(--gradient-primary); margin-left:10px;">Вперёд →</button>
+                        </div>
+
+                        <div class="action-buttons">
+
+                            <button
+                                type="button"
+                                id="showChartBtn"
+                                class="btn-chart"
+                            >
+                                📈 Показать графики
+                            </button>
+
+                            <button
+                                type="button"
+                                id="sendRedashBtn"
+                                class="btn-red"
+                            >
+                                🚀 Послать в BI
+                            </button>
+
+                            <button
+                                type="button"
+                                id="saveExcelBtn"
+                                class="btn-green"
+                            >
+                                💾 Сохранить в Excel
+                            </button>
+
+                            <button
+                                type="button"
+                                class="btn-chart open-table-btn"
+                            >
+                                📋 Таблица
+                            </button>
+
+                            <button
+                                type="button"
+                                id="businessTermsBtn"
+                                class="btn-orange"
+                            >
+                                🏢 Бизнес-термины
+                            </button>
+
+                        </div>
+
+                    {% else %}
+
+                        <i>Нет данных</i>
+
+                    {% endif %}
+
+                </div>
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </form>
+
+<script>
+
+    // =========================================
+    // THEME SWITCHER
+    // =========================================
+
+    (function() {
+        const themeSelect = document.getElementById('themeSelect');
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('app-theme', theme);
+        }
+
+        const savedTheme = localStorage.getItem('app-theme') || 'dark';
+        setTheme(savedTheme);
+        if (themeSelect) {
+            themeSelect.value = savedTheme;
+        }
+
+        if (themeSelect) {
+            themeSelect.addEventListener('change', function() {
+                setTheme(this.value);
+            });
+        }
+    })();
+
+    // =========================================
+    // PAGINATION
+    // =========================================
+
+    const ROWS_PER_PAGE = 10;
+    let currentPage = 1;
+    let paginationInitialized = false;
+
+    function initPagination() {
+        const rows = document.querySelectorAll('#tableBody .data-row');
+        const totalRows = rows.length;
+        if (totalRows <= ROWS_PER_PAGE) {
+            const paginationDiv = document.getElementById('pagination');
+            if (paginationDiv) paginationDiv.style.display = 'none';
+            rows.forEach(row => row.style.display = '');
+            paginationInitialized = false;
+            return;
+        }
+        const totalPages = Math.ceil(totalRows / ROWS_PER_PAGE);
+        const paginationDiv = document.getElementById('pagination');
+        const pageInfo = document.getElementById('pageInfo');
+        const prevBtn = document.getElementById('prevPageBtn');
+        const nextBtn = document.getElementById('nextPageBtn');
+
+        if (!paginationDiv) return;
+        paginationDiv.style.display = 'block';
+
+        function showPage(page) {
+            currentPage = page;
+            const start = (page - 1) * ROWS_PER_PAGE;
+            const end = start + ROWS_PER_PAGE;
+            rows.forEach((row, index) => {
+                row.style.display = (index >= start && index < end) ? '' : 'none';
+            });
+            pageInfo.textContent = `Страница ${page} из ${totalPages} (всего ${totalRows} строк)`;
+            prevBtn.disabled = (page === 1);
+            nextBtn.disabled = (page === totalPages);
+        }
+
+        if (!paginationInitialized) {
+            prevBtn.addEventListener('click', function() {
+                if (currentPage > 1) showPage(currentPage - 1);
+            });
+            nextBtn.addEventListener('click', function() {
+                if (currentPage < totalPages) showPage(currentPage + 1);
+            });
+            paginationInitialized = true;
+        }
+
+        showPage(1);
+    }
+
+    // =========================================
+    // HISTORY
+    // =========================================
+
+    const questionBox =
+        document.getElementById("questionBox");
+
+    const historyList =
+        document.getElementById("historyList");
+
+    const loading =
+        document.getElementById("loading");
+
+    const editBtn =
+        document.getElementById("editBtn");
+
+    const sqlDisplay =
+        document.getElementById("sqlDisplay");
+
+    const sqlEditor =
+        document.getElementById("sqlEditor");
+
+    const execBtn =
+        document.getElementById("execBtn");
+
+    const savePromptBtn =
+        document.getElementById("savePromptBtn");
+
+    const showChartBtn =
+        document.getElementById("showChartBtn");
+
+    const sendRedashBtn =
+        document.getElementById("sendRedashBtn");
+
+    const saveExcelBtn =
+        document.getElementById("saveExcelBtn");
+
+    const openTableButtons =
+        document.querySelectorAll('.open-table-btn');
+
+    window.resultTableData = {% if result and result.rows %}{{ {'columns': result.columns, 'rows': result.rows}|tojson }}{% else %}null{% endif %};
+
+    const explainSqlBtn =
+        document.getElementById("explainSqlBtn");
+
+    const businessTermsBtn =
+        document.getElementById("businessTermsBtn");
+
+    // =========================================
+    // HISTORY (загрузка)
+    // =========================================
+
+    const savedHistory = JSON.parse(
+        sessionStorage.getItem("queryHistory") || "[]"
+    );
+
+    savedHistory.forEach(q => {
+        const li = document.createElement("li");
+        li.textContent = q;
+        historyList.appendChild(li);
+    });
+
+    function addToHistory(question) {
+        if (!question.trim()) return;
+        const li = document.createElement("li");
+        li.textContent = question;
+        historyList.appendChild(li);
+        savedHistory.push(question);
+        sessionStorage.setItem("queryHistory", JSON.stringify(savedHistory));
+    }
+
+    // =========================================
+    // FORM SUBMIT
+    // =========================================
+
+    document.getElementById("queryForm").addEventListener("submit", function () {
+        loading.style.display = "block";
+        addToHistory(questionBox.value);
+    });
+
+    // =========================================
+    // PAGE LOAD
+    // =========================================
+
+    window.addEventListener("load", function () {
+        loading.style.display = "none";
+        initPagination();
+    });
+
+    // =========================================
+    // EDIT SQL
+    // =========================================
+
+    if (editBtn) {
+        editBtn.addEventListener("click", function () {
+            if (sqlDisplay && sqlEditor && execBtn) {
+                sqlDisplay.style.display = "none";
+                sqlEditor.style.display = "block";
+                execBtn.style.display = "inline-block";
+            }
+        });
+    }
+
+    // =========================================
+    // SAVE PROMPT
+    // =========================================
+
+    if (savePromptBtn) {
+        savePromptBtn.addEventListener("click", function () {
+            fetch("/save_prompt", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    question: questionBox.value,
+                    sql_query: sqlEditor ? sqlEditor.value : (sqlDisplay ? sqlDisplay.textContent : "")
+                })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === "ok") {
+                    alert("Сохранено ✓");
+                } else {
+                    alert("Ошибка: " + res.message);
+                }
+            })
+            .catch(err => {
+                alert("Ошибка сохранения: " + err);
+            });
+        });
+    }
+
+    // =========================================
+    // SEND TO REDASH
+    // =========================================
+
+    if (sendRedashBtn) {
+        sendRedashBtn.addEventListener("click", function () {
+            const sql = sqlEditor ? sqlEditor.value : (sqlDisplay ? sqlDisplay.textContent : "");
+            fetch("/send_to_redash", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ question: questionBox.value, sql_query: sql })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === "ok") {
+                    alert("SQL отправлен в BI (Redash) ✓");
+                } else {
+                    alert("Ошибка: " + res.message);
+                }
+            })
+            .catch(err => {
+                alert("Ошибка отправки: " + err);
+            });
+        });
+    }
+
+    // =========================================
+    // SAVE EXCEL
+    // =========================================
+
+    if (saveExcelBtn) {
+        saveExcelBtn.addEventListener("click", function () {
+            const sql = sqlEditor ? sqlEditor.value : (sqlDisplay ? sqlDisplay.textContent : "");
+            const question = questionBox.value;
+            if (!sql) { alert("Нет SQL-запроса"); return; }
+            fetch("/export_excel", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sql_query: sql, question: question })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === "ok") {
+                    window.open("/download_file/" + encodeURIComponent(res.filename), "_blank");
+                } else {
+                    alert("Ошибка: " + res.message);
+                }
+            })
+            .catch(err => {
+                alert("Ошибка Excel: " + err);
+            });
+        });
+    }
+
+    // =========================================
+    // ОТКРЫТИЕ ТАБЛИЦЫ В НОВОЙ ВКЛАДКЕ (ИСПРАВЛЕНИЕ 1)
+    // =========================================
+    if (openTableButtons && openTableButtons.length) {
+        openTableButtons.forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                try {
+                    let tableData = window.resultTableData || null;
+                    if (!tableData) {
+                        let tableEl = document.getElementById('resultTable');
+                        if (!tableEl) {
+                            tableEl = document.querySelector('#resultBlock table') || document.querySelector('table');
+                        }
+                        if (tableEl) {
+                            const cols = [];
+                            const ths = tableEl.querySelectorAll('thead th');
+                            if (ths && ths.length) {
+                                ths.forEach(th => cols.push(th.textContent.trim()));
+                            }
+                            const rows = [];
+                            const trs = tableEl.querySelectorAll('tbody tr');
+                            trs.forEach(tr => {
+                                const cells = Array.from(tr.querySelectorAll('td'));
+                                const row = cells.map(td => td.textContent);
+                                rows.push(row);
+                            });
+                            tableData = { sql_query: sqlDisplay ? sqlDisplay.textContent : '', columns: cols, rows: rows };
+                        }
+                    }
+
+                    if (tableData) {
+                        localStorage.setItem('chatTableData', JSON.stringify(tableData));
+                        console.debug('[INDEX] chatTableData saved', tableData);
+                        // ===== ИСПРАВЛЕНИЕ: открываем в новой вкладке =====
+                        window.open('/table', '_blank');
+                    } else {
+                        alert('Нет табличных данных для открытия страницы таблицы.');
+                    }
+                } catch (e) {
+                    console.error('Ошибка при подготовке данных таблицы:', e);
+                    alert('Ошибка при открытии таблицы: ' + e.message);
+                }
+            });
+        });
+    }
+
+    // =========================================
+    // SQL-ЧАТ (бывш. "Объяснить SQL")
+    // =========================================
+
+    if (explainSqlBtn) {
+        explainSqlBtn.addEventListener("click", function () {
+            const sql = sqlEditor ? sqlEditor.value : (sqlDisplay ? sqlDisplay.textContent : "");
+            if (sql && sql.trim()) {
+                window.open("/chat?sql_query=" + encodeURIComponent(sql), "_blank");
+            } else {
+                window.open("/chat", "_blank");
+            }
+        });
+    }
+
+    // =========================================
+    // SHOW CHART — ОТКРЫВАЕТ /graf В НОВОЙ ВКЛАДКЕ
+    // =========================================
+
+    if (showChartBtn) {
+        showChartBtn.addEventListener("click", function () {
+            const sql = sqlEditor ? sqlEditor.value : (sqlDisplay ? sqlDisplay.textContent : "");
+            if (!sql) { alert("Нет SQL-запроса"); return; }
+            window.open('/graf?sql_query=' + encodeURIComponent(sql), '_blank');
+        });
+    }
+
+    // =========================================
+    // BUSINESS TERMS
+    // =========================================
+
+    if (businessTermsBtn) {
+        businessTermsBtn.addEventListener("click", function () {
+            const sql = sqlEditor ? sqlEditor.value : (sqlDisplay ? sqlDisplay.textContent : "");
+            if (!sql) { alert("Нет SQL-запроса"); return; }
+            const btn = this;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Загрузка...';
+            fetch("/modify_sql_business_terms", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sql_query: sql })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === "ok") {
+                    if (sqlDisplay) { sqlDisplay.textContent = res.sql_query; sqlDisplay.style.display = "block"; }
+                    if (sqlEditor) { sqlEditor.value = res.sql_query; sqlEditor.style.display = "none"; }
+                    if (execBtn) { execBtn.style.display = "none"; }
+                    const tableHead = document.querySelector("#resultTable thead tr");
+                    if (tableHead && res.result && res.result.columns) {
+                        tableHead.innerHTML = "";
+                        res.result.columns.forEach(function(col) {
+                            const th = document.createElement("th");
+                            th.textContent = col;
+                            tableHead.appendChild(th);
+                        });
+                    }
+                    const tableBody = document.getElementById("tableBody");
+                    if (tableBody && res.result && res.result.rows) {
+                        tableBody.innerHTML = "";
+                        res.result.rows.forEach(function(row) {
+                            const tr = document.createElement("tr");
+                            tr.className = "data-row";
+                            row.forEach(function(value) {
+                                const td = document.createElement("td");
+                                td.textContent = value;
+                                tr.appendChild(td);
+                            });
+                            tableBody.appendChild(tr);
+                        });
+                    }
+                    currentPage = 1;
+                    paginationInitialized = false;
+                    initPagination();
+                } else {
+                    alert("Ошибка: " + (res.message || "Неизвестная ошибка"));
+                }
+            })
+            .catch(err => { alert("Ошибка запроса: " + err); })
+            .finally(function() { btn.disabled = false; btn.textContent = originalText; });
+        });
+    }
+
+    // =========================================
+    // CTRL+ENTER
+    // =========================================
+
+    document.addEventListener("keydown", function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+            if (document.activeElement === questionBox) {
+                e.preventDefault();
+                const askBtn = document.querySelector('button[name="action"][value="ask"]');
+                if (askBtn && !askBtn.disabled) {
+                    loading.style.display = "block";
+                    document.getElementById("queryForm").requestSubmit(askBtn);
+                }
+            }
+        }
+    });
+
+    // =========================================
+    // PERSIST SQL RESULT FOR TABLE MODE
+    // =========================================
+    if (window.resultTableData) {
+        try {
+            localStorage.setItem('chatTableData', JSON.stringify(window.resultTableData));
+        } catch (e) {
+            console.error('Ошибка при сохранении результата SQL в localStorage:', e);
+        }
+    }
+
+</script>
+</body>
+</html>

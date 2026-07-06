@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Графики</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+    <style>
+
+        .graf-layout {
+            display: flex;
+            gap: 20px;
+            max-width: 1500px;
+            margin: 0 auto;
+            align-items: flex-start;
+        }
+
+        .graf-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        #plotlyChart {
+            width: 100%;
+            min-height: 520px;
+            background: #ffffff;
+            border: 1px solid var(--border-default);
+            border-radius: 12px;
+            padding: 10px;
+        }
+
+        /* ===== БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ===== */
+        .graf-sidebar {
+            width: 280px;
+            flex-shrink: 0;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-default);
+            border-radius: 12px;
+            padding: 18px;
+            position: sticky;
+            top: 20px;
+            box-shadow: var(--shadow-block);
+        }
+
+        .graf-sidebar h3 {
+            color: var(--text-accent);
+            margin: 0 0 16px 0;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .graf-sidebar .setting-group {
+            margin-bottom: 14px;
+        }
+
+        .graf-sidebar label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .graf-sidebar select {
+            width: 100%;
+            padding: 8px 10px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 1px solid var(--border-input);
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+            appearance: auto;
+        }
+
+        .graf-sidebar select:hover {
+            border-color: var(--text-accent);
+        }
+
+        .graf-sidebar select:focus {
+            border-color: var(--border-input-focus);
+            box-shadow: 0 0 0 2px rgba(0, 191, 255, 0.15);
+        }
+
+        .graf-sidebar select option {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+        }
+
+        .graf-sidebar .build-btn {
+            width: 100%;
+            margin-top: 10px;
+            padding: 11px;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: var(--shadow-btn);
+        }
+
+        .graf-sidebar .build-btn:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-btn-hover);
+        }
+
+        .graf-sidebar .build-btn:active {
+            transform: scale(0.97);
+        }
+
+        .graf-sidebar .reset-btn {
+            width: 100%;
+            margin-top: 6px;
+            padding: 8px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .graf-sidebar .reset-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--text-secondary);
+            transform: none;
+            opacity: 1;
+        }
+
+        .graf-sidebar .data-info {
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-light);
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .graf-sidebar .data-info strong {
+            color: var(--text-accent);
+        }
+
+        /* ===== КНОПКИ ЭКСПОРТА — В ОДНУ ЛИНИЮ ===== */
+        .chart-toolbar {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .chart-toolbar .hide-on-table-mode {
+            display: inline-flex;
+        }
+        .chart-toolbar.table-mode .hide-on-table-mode {
+            display: none;
+        }
+        .chart-toolbar.hidden {
+            display: none;
+        }
+
+        .chart-toolbar button {
+            min-width: 100px;
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin: 0;
+            line-height: 1.4;
+            height: 44px;
+            box-sizing: border-box;
+        }
+
+        .chart-toolbar button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-html {
+            background: var(--gradient-html);
+            color: #fff;
+        }
+
+        .btn-html:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        .btn-jpg {
+            background: var(--gradient-jpg);
+            color: #fff;
+        }
+
+        .btn-jpg:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        .btn-green {
+            background: var(--gradient-success);
+            color: #fff;
+        }
+
+        .btn-green:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        /* ===== КНОПКА COPY ===== */
+        .copy-chart-btn {
+            background: var(--gradient-primary);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: var(--shadow-btn);
+            margin: 0;
+            line-height: 1.4;
+            height: 44px;
+            box-sizing: border-box;
+        }
+
+        .copy-chart-btn:hover:not(:disabled) {
+            opacity: 0.92;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-btn-hover);
+        }
+
+        .copy-chart-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .copy-chart-btn.copied {
+            background: var(--gradient-success);
+        }
+
+        .error-message {
+            color: var(--text-error);
+            text-align: center;
+            padding: 20px;
+            font-size: 16px;
+        }
+
+        .success-message {
+            color: var(--text-success);
+            text-align: center;
+            padding: 10px;
+        }
+
+        .empty-chart-msg {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        /* ===== АДАПТИВНОСТЬ ===== */
+        @media (max-width: 900px) {
+            .graf-layout {
+                flex-direction: column-reverse;
+            }
+            .graf-sidebar {
+                width: 100%;
+                position: static;
+            }
+        }
+
+    </style>
+
+</head>
+
+<body class="graf-page">
+
+    <h2>📊 Графики</h2>
+
+    <input type="hidden" id="sqlQueryHidden" value="{{ sql_query }}">
+    <input type="hidden" id="tableMode" value="{{ '1' if table_mode else '0' }}">
+
+    <div id="statusMessage" style="display:none;"></div>
+
+    <!-- ===== КНОПКИ В ОДНУ ЛИНИЮ ===== -->
+    <div class="chart-toolbar">
+
+        <button class="btn-html hide-on-table-mode"
+                onclick="exportChart('html')"
+                type="button">
+            🌐 HTML
+        </button>
+
+        <button class="btn-jpg hide-on-table-mode"
+                onclick="exportChart('jpg')"
+                type="button">
+            🖼 JPG
+        </button>
+
+        <button class="btn-green hide-on-table-mode"
+                onclick="generateReportWithCharts()"
+                type="button">
+            📄 Отчёт
+        </button>
+
+        <!-- КНОПКА COPY -->
+        <button class="copy-chart-btn"
+                id="copyChartBtn"
+                onclick="copyChartToClipboard()"
+                type="button">
+            📋 Copy
+        </button>
+
+    </div>
+
+    <div class="graf-layout">
+
+        <!-- ОСНОВНАЯ ОБЛАСТЬ: ГРАФИК -->
+        <div class="graf-main">
+            <div id="plotlyChart">
+                <div class="empty-chart-msg">⏳ Загрузка данных...</div>
+            </div>
+        </div>
+
+        <!-- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК -->
+        <div class="graf-sidebar">
+            <h3>⚙️ Настройки графика</h3>
+
+            <div class="setting-group">
+                <label for="chartType">Тип графика</label>
+                <select id="chartType">
+                    <option value="bar">📊 Гистограмма (Bar)</option>
+                    <option value="pie">🥧 Круговая (Pie)</option>
+                    <option value="line">📈 Линейный (Line)</option>
+                    <option value="area">▤ С областями (Area)</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label for="axisX">Ось X <span id="axisXHint"></span></label>
+                <select id="axisX"></select>
+            </div>
+
+            <div class="setting-group">
+                <label for="axisY">Ось Y <span id="axisYHint"></span></label>
+                <select id="axisY"></select>
+            </div>
+
+            <div class="setting-group">
+                <label for="colorScheme">Цвет</label>
+                <select id="colorScheme">
+                    <option value="default">🎨 Стандартный</option>
+                    <option value="blue">🔵 Синий</option>
+                    <option value="red">🔴 Красный</option>
+                    <option value="green">🟢 Зелёный</option>
+                    <option value="orange">🟠 Оранжевый</option>
+                    <option value="purple">🟣 Фиолетовый</option>
+                    <option value="warm">🌅 Тёплый</option>
+                    <option value="cool">🌊 Холодный</option>
+                    <option value="pastel">🎀 Пастельный</option>
+                    <option value="contrast">⚡ Контрастный</option>
+                </select>
+            </div>
+
+            <button class="build-btn" id="buildBtn" onclick="buildChart()">📊 Построить график</button>
+            <button class="reset-btn" onclick="resetSettings()">↺ Сбросить настройки</button>
+
+            <div class="data-info" id="dataInfo">
+                <!-- Заполняется JS -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+
+        // ==========================================
+        // ПОДХВАТЫВАЕМ ТЕМУ ИЗ ГЛАВНОГО ОКНА
+        // ==========================================
+        (function() {
+            var savedTheme = localStorage.getItem('app-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+
+        // ==========================================
+        // ДАННЫЕ ИЗ СЕРВЕРА ИЛИ ТАБЛИЦЫ
+        // ==========================================
+        const chartData = {
+            columns: {{ columns|tojson }},
+            rows: {{ rows|tojson }}
+        };
+        const tableMode = document.getElementById('tableMode').value === '1';
+
+        function loadTableData() {
+            if (!tableMode && document.getElementById('sqlQueryHidden').value.trim()) {
+                return;
+            }
+            try {
+                const stored = localStorage.getItem('chatTableData');
+                if (!stored) {
+                    return;
+                }
+                const data = JSON.parse(stored);
+                chartData.columns = data.columns || [];
+                chartData.rows = data.rows || [];
+            } catch (err) {
+                console.error('Ошибка загрузки данных таблицы:', err);
+            }
+        }
+
+        // ==========================================
+        // ЦВЕТОВЫЕ ПАЛИТРЫ (10 исходных + 14 новых = 24 палитры)
+        // ==========================================
+        const colorSchemes = {
+            // === Исходные 10 ===
+            default:  ['#636EFA','#EF553B','#00CC96','#AB63FA','#FFA15A','#19D3F3','#FF6692','#B6E880','#FF97FF','#FECB52'],
+            blue:     ['#0066ff','#00bfff','#2196F3','#03A9F4','#0288D1','#01579B','#4FC3F7','#29B6F6','#0091EA','#00B0FF'],
+            red:      ['#d62728','#ff4444','#ff6666','#e53935','#c62828','#b71c1c','#ef5350','#f44336','#FF1744','#D50000'],
+            green:    ['#2ca02c','#4CAF50','#00aa55','#66BB6A','#388E3C','#1B5E20','#81C784','#43A047','#00C853','#00E676'],
+            orange:   ['#ff7f0e','#FF9800','#FFA726','#FB8C00','#E65100','#FF6D00','#FFB74D','#FFA000','#FF8F00','#F57C00'],
+            purple:   ['#9467bd','#9C27B0','#AB47BC','#7B1FA2','#6A1B9A','#4A148C','#CE93D8','#8E24AA','#AA00FF','#D500F9'],
+            warm:     ['#ff4444','#ff7f0e','#ffa500','#ffcc00','#ff6666','#ff9933','#ffcc66','#ff5555','#FF8A65','#FFAB40'],
+            cool:     ['#0066ff','#00bfff','#00aa55','#2ca02c','#1f77b4','#0099cc','#33ccff','#006699','#26C6DA','#0097A7'],
+            pastel:   ['#FFB3BA','#BAFFC9','#BAE1FF','#FFFFBA','#E8BAFF','#FFD9BA','#BAFFF5','#FFC9DE','#C9FFE5','#D4C5F9'],
+            contrast: ['#333333','#FF0000','#0000FF','#00FF00','#FF00FF','#FFFF00','#00FFFF','#FF8800','#8800FF','#0088FF'],
+
+            // === 14 НОВЫХ ПАЛИТР ===
+            gray:     ['#757575','#9E9E9E','#BDBDBD','#616161','#424242','#8D8D8D','#A5A5A5','#585858','#C7C7C7','#6E6E6E'],
+            greyscale:['#333333','#4D4D4D','#666666','#808080','#999999','#B3B3B3','#CCCCCC','#E0E0E0','#F5F5F5','#FFFFFF'],
+            lightgreen:['#C8E6C9','#A5D6A7','#81C784','#66BB6A','#4CAF50','#43A047','#388E3C','#2E7D32','#1B5E20','#00E676'],
+            lightblue: ['#BBDEFB','#90CAF9','#64B5F6','#42A5F5','#2196F3','#1E88E5','#1976D2','#1565C0','#0D47A1','#00B0FF'],
+            teal:     ['#B2DFDB','#80CBC4','#4DB6AC','#26A69A','#009688','#00897B','#00796B','#00695C','#004D40','#1DE9B6'],
+            indigo:   ['#C5CAE9','#9FA8DA','#7986CB','#5C6BC0','#3F51B5','#3949AB','#303F9F','#283593','#1A237E','#536DFE'],
+            pink:     ['#F8BBD0','#F48FB1','#F06292','#EC407A','#E91E63','#D81B60','#C2185B','#AD1457','#880E4F','#FF4081'],
+            brown:    ['#D7CCC8','#BCAAA4','#A1887F','#8D6E63','#795548','#6D4C41','#5D4037','#4E342E','#3E2723','#A67B5B'],
+            lime:     ['#F0F4C3','#E6EE9C','#DCE775','#D4E157','#CDDC39','#C0CA33','#AFB42B','#9E9D24','#827717','#EEFF41'],
+            cyan:     ['#B2EBF2','#80DEEA','#4DD0E1','#26C6DA','#00BCD4','#00ACC1','#0097A7','#00838F','#006064','#18FFFF'],
+            amber:    ['#FFECB3','#FFE082','#FFD54F','#FFCA28','#FFC107','#FFB300','#FFA000','#FF8F00','#FF6F00','#FFD740'],
+            deeporange:['#FFCCBC','#FFAB91','#FF8A65','#FF7043','#FF5722','#F4511E','#E64A19','#D84315','#BF360C','#FF6E40'],
+            coral:    ['#FBE9E7','#FFCCBC','#FFAB91','#FF8A80','#FF6E40','#FF5252','#FF1744','#D50000','#B71C1C','#FF9E80'],
+            midnight: ['#1A237E','#283593','#303F9F','#3949AB','#3F51B5','#5C6BC0','#7986CB','#9FA8DA','#C5CAE9','#E8EAF6']
+        };
+
+
+        // ==========================================
+        // ИНИЦИАЛИЗАЦИЯ
+        // ==========================================
+        function init() {
+            loadTableData();
+            populateColumnSelects();
+            updateDataInfo();
+            if (chartData.columns.length > 0 && chartData.rows.length > 0) {
+                buildChart();
+            } else {
+                document.getElementById('plotlyChart').innerHTML =
+                    '<div class="empty-chart-msg">Нет данных для построения графика.<br>Выполните SQL-запрос на главной странице.</div>';
+            }
+
+            document.getElementById('chartType').addEventListener('change', function() {
+                updateAxisHints();
+                buildChart();
+            });
+            document.getElementById('axisX').addEventListener('change', buildChart);
+            document.getElementById('axisY').addEventListener('change', buildChart);
+            document.getElementById('colorScheme').addEventListener('change', buildChart);
+
+            if (tableMode) {
+                var toolbar = document.querySelector('.chart-toolbar');
+                if (toolbar) toolbar.classList.add('table-mode');
+            }
+            updateAxisHints();
+        }
+
+        // ==========================================
+        // ЗАПОЛНЕНИЕ СЕЛЕКТОВ КОЛОНОК
+        // ==========================================
+        function populateColumnSelects() {
+            const axisX = document.getElementById('axisX');
+            const axisY = document.getElementById('axisY');
+
+            axisX.innerHTML = '';
+            axisY.innerHTML = '';
+
+            chartData.columns.forEach(function(col, idx) {
+                var optX = document.createElement('option');
+                optX.value = idx;
+                optX.textContent = col;
+                axisX.appendChild(optX);
+
+                var optY = document.createElement('option');
+                optY.value = idx;
+                optY.textContent = col;
+                axisY.appendChild(optY);
+            });
+
+            if (chartData.columns.length > 1) {
+                axisY.value = 1;
+            }
+        }
+
+        // ==========================================
+        // ПОДСКАЗКИ ДЛЯ ОСЕЙ
+        // ==========================================
+        function updateAxisHints() {
+            var chartType = document.getElementById('chartType').value;
+            var xHint = document.getElementById('axisXHint');
+            var yHint = document.getElementById('axisYHint');
+
+            if (chartType === 'pie') {
+                xHint.textContent = '(метки)';
+                yHint.textContent = '(значения)';
+            } else {
+                xHint.textContent = '';
+                yHint.textContent = '';
+            }
+        }
+
+        // ==========================================
+        // ИНФОРМАЦИЯ О ДАННЫХ
+        // ==========================================
+        function updateDataInfo() {
+            var info = document.getElementById('dataInfo');
+            if (!chartData.columns.length) {
+                info.innerHTML = 'Нет данных';
+                return;
+            }
+            info.innerHTML =
+                '📋 Колонок: <strong>' + chartData.columns.length + '</strong><br>' +
+                '📊 Строк: <strong>' + chartData.rows.length + '</strong><br>' +
+                '📌 ' + chartData.columns.map(function(c) { return '<em>' + c + '</em>'; }).join(', ');
+        }
+
+        // ==========================================
+        // СБРОС НАСТРОЕК
+        // ==========================================
+        function resetSettings() {
+            document.getElementById('chartType').value = 'bar';
+            document.getElementById('colorScheme').value = 'default';
+            if (chartData.columns.length > 0) {
+                document.getElementById('axisX').value = 0;
+            }
+            if (chartData.columns.length > 1) {
+                document.getElementById('axisY').value = 1;
+            }
+            updateAxisHints();
+            buildChart();
+        }
+
+        // ==========================================
+        // ПОСТРОЕНИЕ ГРАФИКА (PLOTLY) — БЕЛЫЙ ФОН, ЧЁРНЫЙ ТЕКСТ
+        // ==========================================
+        function buildChart() {
+            var plotDiv = document.getElementById('plotlyChart');
+            plotDiv.innerHTML = '';
+
+            if (!chartData.columns.length || !chartData.rows.length) {
+                plotDiv.innerHTML =
+                    '<div class="empty-chart-msg">Нет данных для построения графика</div>';
+                return;
+            }
+
+            var chartType = document.getElementById('chartType').value;
+            var xIdx = parseInt(document.getElementById('axisX').value) || 0;
+            var yIdx = parseInt(document.getElementById('axisY').value) || 0;
+            var scheme = document.getElementById('colorScheme').value;
+            var colors = colorSchemes[scheme] || colorSchemes.default;
+            var mainColor = colors[0];
+
+            var xData = chartData.rows.map(function(row) { return row[xIdx]; });
+            var yData = chartData.rows.map(function(row) {
+                var val = row[yIdx];
+                if (val === null || val === undefined) return null;
+                var num = Number(val);
+                return isNaN(num) ? val : num;
+            });
+
+            var xLabel = chartData.columns[xIdx] || '';
+            var yLabel = chartData.columns[yIdx] || '';
+
+            var traces = [];
+
+            // ===== БЕЛЫЙ ФОН И ЧЁРНЫЕ НАДПИСИ ДЛЯ ГРАФИКА =====
+            var layout = {
+                paper_bgcolor: '#ffffff',
+                plot_bgcolor: '#ffffff',
+                font: { color: '#000000', family: 'Arial, sans-serif', size: 12 },
+                margin: { t: 50, r: 30, b: 80, l: 70 },
+                xaxis: {
+                    title: { text: xLabel, font: { size: 13, color: '#000000' } },
+                    gridcolor: '#cccccc',
+                    zerolinecolor: '#aaaaaa',
+                    tickangle: -30,
+                    color: '#000000'
+                },
+                yaxis: {
+                    title: { text: yLabel, font: { size: 13, color: '#000000' } },
+                    gridcolor: '#cccccc',
+                    zerolinecolor: '#aaaaaa',
+                    color: '#000000'
+                },
+                showlegend: false,
+                title: {
+                    text: yLabel + ' / ' + xLabel,
+                    font: { size: 16, color: '#000000' },
+                    x: 0.5
+                },
+                hovermode: 'closest',
+                bargap: 0.15
+            };
+
+            var config = {
+                responsive: true,
+                displayModeBar: true,
+                modeBarButtonsToRemove: ['sendDataToCloud', 'toImage2'],
+                displaylogo: false
+            };
+
+            // ===== ТРАССИРОВКИ ПО ТИПУ =====
+            if (chartType === 'bar') {
+                traces = [{
+                    x: xData,
+                    y: yData,
+                    type: 'bar',
+                    marker: {
+                        color: mainColor,
+                        line: { width: 0 }
+                    },
+                    hovertemplate: '<b>' + xLabel + ':</b> %{x}<br><b>' + yLabel + ':</b> %{y}<extra></extra>'
+                }];
+
+            } else if (chartType === 'pie') {
+                traces = [{
+                    labels: xData,
+                    values: yData,
+                    type: 'pie',
+                    marker: { colors: colors },
+                    textinfo: 'label+percent',
+                    textfont: { size: 12, color: '#000000' },
+                    hole: 0.35,
+                    hovertemplate: '<b>%{label}</b><br>Значение: %{value}<br>Доля: %{percent}<extra></extra>'
+                }];
+                layout.xaxis = { visible: false };
+                layout.yaxis = { visible: false };
+                layout.showlegend = true;
+                layout.legend = { font: { color: '#000000', size: 11 } };
+                layout.title.text = xLabel + ' — распределение';
+
+            } else if (chartType === 'line') {
+                traces = [{
+                    x: xData,
+                    y: yData,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    line: { color: mainColor, width: 2.5, shape: 'spline' },
+                    marker: { color: mainColor, size: 7, line: { color: '#ffffff', width: 1 } },
+                    hovertemplate: '<b>' + xLabel + ':</b> %{x}<br><b>' + yLabel + ':</b> %{y}<extra></extra>'
+                }];
+
+            } else if (chartType === 'area') {
+                traces = [{
+                    x: xData,
+                    y: yData,
+                    type: 'scatter',
+                    mode: 'lines',
+                    fill: 'tozeroy',
+                    line: { color: mainColor, width: 2 },
+                    fillcolor: mainColor + '30',
+                    hovertemplate: '<b>' + xLabel + ':</b> %{x}<br><b>' + yLabel + ':</b> %{y}<extra></extra>'
+                }];
+            }
+
+            Plotly.newPlot('plotlyChart', traces, layout, config);
+        }
+
+        // ==========================================
+        // СТАТУС-СООБЩЕНИЯ
+        // ==========================================
+        function showStatus(message, isError) {
+            var el = document.getElementById('statusMessage');
+            el.innerHTML = message;
+            el.style.display = 'block';
+            el.className = isError ? 'error-message' : 'success-message';
+            if (!isError) {
+                setTimeout(function() { el.style.display = 'none'; }, 8000);
+            }
+        }
+
+        // ==========================================
+        // КОПИРОВАТЬ ГРАФИК В БУФЕР ОБМЕНА
+        // ==========================================
+        async function copyChartToClipboard() {
+            var plotDiv = document.getElementById('plotlyChart');
+            var btn = document.getElementById('copyChartBtn');
+
+            if (!plotDiv || !plotDiv.data || !plotDiv.data.length) {
+                showStatus('❌ Нет графика для копирования', true);
+                return;
+            }
+
+            btn.disabled = true;
+            var originalText = btn.textContent;
+            btn.textContent = '⏳ Copy...';
+
+            try {
+                var dataUrl = await Plotly.toImage(plotDiv, {
+                    format: 'png',
+                    width: 1400,
+                    height: 900,
+                    scale: 2
+                });
+
+                var response = await fetch(dataUrl);
+                var blob = await response.blob();
+
+                if (navigator.clipboard && navigator.clipboard.write) {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({
+                            [blob.type]: blob
+                        })
+                    ]);
+                    showStatus('✅ График скопирован! Вставьте (Ctrl+V) в документ');
+                    btn.textContent = '✅ Copied!';
+                    btn.classList.add('copied');
+                    setTimeout(function() {
+                        btn.textContent = originalText;
+                        btn.classList.remove('copied');
+                    }, 2500);
+                } else {
+                    showStatus('⚠️ Clipboard API не поддерживается. Используйте JPG или HTML', true);
+                    btn.textContent = originalText;
+                }
+            } catch (err) {
+                console.error('[COPY CHART] Ошибка:', err);
+                showStatus('❌ Не удалось скопировать: ' + err.message, true);
+                btn.textContent = originalText;
+            }
+
+            btn.disabled = false;
+        }
+
+        // ==========================================
+        // ЭКСПОРТ: HTML (клиентский)
+        // ==========================================
+        function exportChart(format) {
+            var buttons = document.querySelectorAll('.chart-toolbar button');
+            buttons.forEach(function(btn) { btn.disabled = true; });
+
+            if (format === 'jpg') {
+                showStatus('⏳ Формирую JPG...');
+                Plotly.toImage('plotlyChart', {
+                    format: 'jpeg',
+                    width: 1400,
+                    height: 900,
+                    scale: 2
+                }).then(function(dataUrl) {
+                    var a = document.createElement('a');
+                    a.href = dataUrl;
+                    a.download = 'chart.jpg';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    showStatus('✅ JPG скачан');
+                }).catch(function(err) {
+                    console.warn('[EXPORT] Клиентский JPG не удался, использую серверный:', err);
+                    serverExport('jpg');
+                });
+
+            } else if (format === 'html') {
+                showStatus('⏳ Формирую HTML...');
+                try {
+                    var plotDiv = document.getElementById('plotlyChart');
+                    var plotData = plotDiv.data;
+                    var plotLayout = plotDiv.layout;
+
+                    var fullHtml = '<!DOCTYPE html>\n' +
+                        '<html>\n<head>\n' +
+                        '    <meta charset="UTF-8">\n' +
+                        '    <title>Charts</title>\n' +
+                        '    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"><\/script>\n' +
+                        '    <style>\n' +
+                        '        body { background:#ffffff; color:#000000; font-family:Arial; padding:20px; }\n' +
+                        '        #chart { width:100%; min-height:600px; }\n' +
+                        '    </style>\n' +
+                        '</head>\n<body>\n' +
+                        '    <div id="chart"></div>\n' +
+                        '    <script>\n' +
+                        '        var data = ' + JSON.stringify(plotData) + ';\n' +
+                        '        var layout = ' + JSON.stringify(plotLayout) + ';\n' +
+                        '        Plotly.newPlot("chart", data, layout, {responsive:true});\n' +
+                        '    <\/script>\n' +
+                        '</body>\n</html>';
+
+                    var blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'chart.html';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showStatus('✅ HTML скачан');
+                } catch(err) {
+                    console.warn('[EXPORT] Клиентский HTML не удался, использую серверный:', err);
+                    serverExport('html');
+                }
+            }
+
+            setTimeout(function() {
+                buttons.forEach(function(btn) { btn.disabled = false; });
+            }, 2000);
+        }
+
+        // ==========================================
+        // СЕРВЕРНЫЙ ЭКСПОРТ (fallback)
+        // ==========================================
+        function serverExport(format) {
+            var sqlQuery = document.getElementById('sqlQueryHidden').value;
+            if (!sqlQuery) {
+                showStatus('❌ Ошибка: SQL-запрос не найден', true);
+                return;
+            }
+            var url = '/export_chart/' + format + '?sql_query=' + encodeURIComponent(sqlQuery);
+            window.open(url, '_blank');
+            showStatus('✅ Экспорт запущен (серверный)');
+        }
+
+        // ==========================================
+        // ОТЧЁТ (серверный)
+        // ==========================================
+        function generateReportWithCharts() {
+            var sqlQuery = document.getElementById('sqlQueryHidden').value;
+
+            if (!sqlQuery) {
+                showStatus('❌ Ошибка: SQL-запрос не найден', true);
+                return;
+            }
+
+            var scheme = document.getElementById('colorScheme').value;
+            var colors = colorSchemes[scheme] || colorSchemes.default;
+            var chartColor = colors[0];
+
+            var btn = document.querySelector('.btn-green');
+            var originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Формирую...';
+            showStatus('⏳ Формирую отчёт...');
+
+            fetch('/generate_report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sql_query: sqlQuery,
+                    question: '',
+                    include_charts: true,
+                    chart_color: chartColor
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (res.status === 'ok') {
+                    showStatus('✅ Файл отчета ' + res.filename + ' сформирован! Открываю скачивание...');
+                    var downloadUrl = '/download_file/' + encodeURIComponent(res.filename);
+                    console.log('[REPORT] Скачивание:', downloadUrl);
+                    window.open(downloadUrl, '_blank');
+                } else {
+                    showStatus('❌ Ошибка: ' + (res.message || 'Неизвестная ошибка'), true);
+                }
+            })
+            .catch(function(err) {
+                showStatus('❌ Ошибка сети: ' + err.message, true);
+                console.error('[REPORT] Ошибка:', err);
+            })
+            .finally(function() {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            });
+        }
+
+        // ==========================================
+        // ЗАПУСК
+        // ==========================================
+        console.log('[GRAF] Страница загружена, SQL:', document.getElementById('sqlQueryHidden').value);
+        console.log('[GRAF] Колонок:', chartData.columns.length, 'Строк:', chartData.rows.length);
+
+        init();
+
+    </script>
+
+</body>
+</html>

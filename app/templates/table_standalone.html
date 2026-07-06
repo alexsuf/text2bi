@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Таблица — SQL Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="{{ url_for('static', filename='export-utils.js') }}"></script>
+    <style>
+        /* ===== СТИЛИ ДЛЯ КНОПОК СКАЧИВАНИЯ (как в chat.html) ===== */
+        .message.assistant .download-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-light, #333);
+        }
+
+        .message.assistant .download-buttons .dl-btn {
+            color: #fff;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+        }
+
+        .message.assistant .download-buttons .dl-btn:hover {
+            transform: translateY(-1px);
+            opacity: 1;
+            box-shadow: 0 2px 8px rgba(0, 102, 255, 0.3);
+        }
+
+        .message.assistant .download-buttons .dl-btn:active {
+            transform: translateY(0);
+        }
+
+        .message.assistant .download-buttons .dl-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ===== DROPDOWN ДЛЯ СКАЧИВАНИЯ ===== */
+        .dl-dropdown-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .message.assistant .download-buttons .dl-btn.btn-download,
+        .table-toolbar .dl-btn.btn-download {
+            background: var(--gradient-primary);
+            color: #fff;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.85;
+            white-space: nowrap;
+        }
+
+        .message.assistant .download-buttons .dl-btn.btn-download:hover,
+        .table-toolbar .dl-btn.btn-download:hover {
+            opacity: 1;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 102, 255, 0.3);
+        }
+
+        .dl-dropdown-menu {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 6px);
+            right: 0;
+            background: var(--bg-surface, #2b2b2b);
+            border: 1px solid var(--border-default, #444);
+            border-radius: 10px;
+            padding: 6px 0;
+            min-width: 180px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+            z-index: 200;
+            animation: dropdownFadeIn 0.15s ease;
+        }
+
+        .dl-dropdown-menu.show {
+            display: block;
+        }
+
+        @keyframes dropdownFadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .dl-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 9px 16px;
+            background: none;
+            border: none;
+            color: var(--text-primary, #f5f5f5);
+            font-size: 13px;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.15s;
+            margin: 0;
+            border-radius: 0;
+            font-weight: 500;
+            font-family: inherit;
+            box-shadow: none;
+            transform: none;
+            opacity: 1;
+            letter-spacing: 0;
+            text-transform: none;
+        }
+
+        .dl-dropdown-item:hover {
+            background: var(--bg-surface-alt, #333);
+            transform: none !important;
+            opacity: 1 !important;
+            box-shadow: none !important;
+        }
+
+        .dl-dropdown-item:active {
+            background: var(--bg-surface-alt, #444);
+            transform: none !important;
+        }
+
+        .dl-dropdown-item .dl-icon {
+            font-size: 16px;
+            width: 22px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .dl-dropdown-item .dl-label {
+            flex: 1;
+        }
+
+        .dl-dropdown-item .dl-ext {
+            font-size: 10px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .dl-dropdown-divider {
+            height: 1px;
+            background: var(--border-light, #333);
+            margin: 4px 0;
+        }
+
+        .dl-dropdown-item.dl-disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .dl-dropdown-item.dl-disabled:hover {
+            background: none;
+        }
+
+        /* ===== СТИЛИ ДЛЯ МИКРОФОНА (как в chat.html) ===== */
+        .input-area .mic-btn {
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: var(--shadow-btn);
+            padding: 0;
+            margin: 0;
+        }
+
+        .input-area .mic-btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.92;
+            box-shadow: var(--shadow-btn-hover);
+        }
+
+        .input-area .mic-btn.recording {
+            background: var(--gradient-danger);
+            animation: micPulse 1.5s infinite;
+        }
+
+        .input-area .mic-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .input-area .mic-status {
+            font-size: 12px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: 80px;
+            text-align: center;
+            transition: color 0.3s ease;
+        }
+
+        .input-area .mic-status.listening {
+            color: #ff6666;
+            font-weight: 600;
+        }
+
+        .input-area .mic-status.processing {
+            color: #ffa500;
+            font-weight: 600;
+        }
+
+        @keyframes micPulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(255, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); }
+        }
+
+        /* ===== ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ===== */
+        .table-toolbar button {
+            margin: 0;
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 8px;
+        }
+
+        .table-toolbar .row-count {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-left: auto;
+        }
+
+        .table-page .chat-messages .message.assistant .markdown-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.5em 0;
+        }
+
+        .table-page .chat-messages .message.assistant .markdown-content th,
+        .table-page .chat-messages .message.assistant .markdown-content td {
+            border: 1px solid var(--border-table);
+            padding: 6px 8px;
+            text-align: left;
+            font-size: 12px;
+        }
+
+        .table-page .chat-messages .message.assistant .markdown-content th {
+            background-color: var(--bg-table-header);
+            color: var(--text-accent);
+            font-weight: 600;
+        }
+
+        .table-page .chat-messages .message.assistant .markdown-content tr:nth-child(even) {
+            background-color: var(--bg-table-alt);
+        }
+    </style>
+</head>
+<body class="table-page">
+    <div class="header">
+        <div class="header-left">
+            <h1>📋 Работа с таблицей</h1>
+            <span class="model-name">{{ llm_model }}</span>
+        </div>
+        <div class="sql-preview" id="sqlPreview" style="display:none;">Загрузка данных...</div>
+    </div>
+
+    <div class="table-toolbar">
+        <button class="btn-main" onclick="addRow()" title="Добавить строку">➕ Строка</button>
+        <button class="btn-main" onclick="addColumn()" title="Добавить колонку">➕ Колонка</button>
+        <button class="btn-red" onclick="deleteLastRow()" title="Удалить последнюю строку">➖ Строка</button>
+        <button class="btn-red" onclick="deleteLastColumn()" title="Удалить последнюю колонку">➖ Колонка</button>
+        <div class="dl-dropdown-wrapper">
+            <button class="dl-btn btn-download" type="button" onclick="toggleToolbarDownloadMenu(event)">Скачать ▾</button>
+<div class="dl-dropdown-menu" id="tableToolbarDownloadMenu">
+                    <button class="dl-dropdown-item" type="button" onclick="downloadTableDocx()">
+                        <span class="dl-icon">📄</span>
+                        <span class="dl-label">Word</span>
+                        <span class="dl-ext">.docx</span>
+                    </button>
+                    <button class="dl-dropdown-item" type="button" onclick="downloadTableText()">
+                        <span class="dl-icon">📝</span>
+                        <span class="dl-label">Text</span>
+                        <span class="dl-ext">.txt</span>
+                    </button>
+                    <div class="dl-dropdown-divider"></div>
+                    <!-- <button class="dl-dropdown-item" type="button" onclick="exportTableExcel()">
+                        <span class="dl-icon">📊</span>
+                        <span class="dl-label">Excel</span>
+                        <span class="dl-ext">.xlsx</span>
+                    </button> -->
+                <button class="dl-dropdown-item" type="button" onclick="downloadTableText()">
+                    <span class="dl-icon">📝</span>
+                    <span class="dl-label">Text</span>
+                    <span class="dl-ext">.txt</span>
+                </button>
+                <div class="dl-dropdown-divider"></div>
+                
+            </div>
+        </div>
+        <button class="btn-main" onclick="triggerImportExcel()" title="Импорт из Excel">📥 Импорт Excel</button>
+        <input type="file" id="excelFileInput" accept=".xlsx,.xls" style="display:none" />
+        <button class="btn-chart" onclick="openChartFromTable()" title="Построить график">📊 График</button>
+        <span class="row-count" id="rowCount">0 строк</span>
+    </div>
+
+    <div class="table-main">
+        <div class="table-left">
+            <div class="table-container" id="tableContainer">
+                <table id="dataTable">
+                    <thead id="tableHead"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+                <div id="emptyState" style="text-align:center; color:var(--text-empty); padding:40px; font-size:16px;">
+                    Нет данных. Откройте эту страницу из режима чата после выполнения SQL-запроса.
+                </div>
+            </div>
+        </div>
+        <div class="table-right">
+            <div class="chat-section">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message assistant">
+                        Здравствуйте! Я вижу данные вашей таблицы. Вы можете редактировать ячейки (двойной клик), добавлять/удалять строки и колонки. Задавайте вопросы по данным — я буду отвечать, опираясь только на текущее содержимое таблицы.
+                    </div>
+                </div>
+                <div class="input-area">
+                    <textarea id="chatInput" placeholder="Задайте вопрос по данным таблицы..." rows="1"
+                              onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();askTableChat();}"></textarea>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                        <button class="mic-btn" id="micBtn" title="Голосовой ввод" type="button">🎤</button>
+                        <span class="mic-status" id="micStatus"></span>
+                        <button class="ask-btn" id="askBtn" onclick="askTableChat()">Спросить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =============================================
+        // ТЕМА — читаем из localStorage
+        // =============================================
+        const savedTheme = localStorage.getItem('app-theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        // =============================================
+        // ДАННЫЕ ТАБЛИЦЫ
+        // =============================================
+        let tableColumns = [];
+        let tableRows = [];
+        let chatHistory = [];
+
+        function loadData() {
+            try {
+                const stored = localStorage.getItem('chatTableData');
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    console.debug('[TABLE] loaded chatTableData', data);
+                    tableColumns = data.columns || [];
+                    tableRows = data.rows || [];
+
+                    if ((!tableColumns || !tableColumns.length) && tableRows && tableRows.length) {
+                        tableColumns = tableRows[0].map((_, idx) => 'column_' + (idx + 1));
+                    }
+
+                    const sqlQuery = data.sql_query || '';
+                    if (sqlQuery) {
+                        document.getElementById('sqlPreview').textContent =
+                            'SQL: ' + sqlQuery.substring(0, 80) + (sqlQuery.length > 80 ? '...' : '');
+                        document.getElementById('sqlPreview').title = sqlQuery;
+                    }
+                }
+            } catch(e) {
+                console.error('Ошибка загрузки данных:', e);
+            }
+
+            renderTable();
+        }
+
+        // =============================================
+        // РЕНДЕРИНГ ТАБЛИЦЫ
+        // =============================================
+        function saveTableData() {
+            try {
+                const data = {
+                    sql_query: document.getElementById('sqlPreview').title || '',
+                    columns: tableColumns,
+                    rows: tableRows
+                };
+                localStorage.setItem('chatTableData', JSON.stringify(data));
+            } catch (e) {
+                console.error('Ошибка сохранения данных таблицы:', e);
+            }
+        }
+
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // ===== НОВОЕ: ФУНКЦИЯ УДАЛЕНИЯ HTML-ТЕГОВ (как в chat.html логика с data-raw-content) =====
+        function stripHtml(html) {
+            if (!html) return '';
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            return doc.body.textContent || '';
+        }
+
+        // =============================================
+        // VOICE INPUT (как в chat.html)
+        // =============================================
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        let recognition = null;
+        let isRecording = false;
+        let fullVoiceText = '';
+        let silenceTimer = null;
+        const SILENCE_TIMEOUT = 7000;
+
+        function resetSilenceTimer() {
+            clearTimeout(silenceTimer);
+            silenceTimer = setTimeout(() => {
+                if (recognition) recognition.stop();
+            }, SILENCE_TIMEOUT);
+        }
+
+        async function requestMicPermission() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                return false;
+            }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+                return true;
+            } catch (err) {
+                console.error('[VOICE] Mic error:', err);
+                alert('❌ Доступ к микрофону запрещён. Разрешите доступ в настройках браузера.');
+                return false;
+            }
+        }
+
+        function initRecognition() {
+            if (!SpeechRecognition) {
+                const micBtn = document.getElementById('micBtn');
+                if (micBtn) {
+                    micBtn.disabled = true;
+                    micBtn.style.opacity = '0.4';
+                }
+                const micStatus = document.getElementById('micStatus');
+                if (micStatus) micStatus.textContent = 'Не поддерживается';
+                return null;
+            }
+
+            const rec = new SpeechRecognition();
+            rec.lang = 'ru-RU';
+            rec.interimResults = true;
+            rec.continuous = true;
+            rec.maxAlternatives = 1;
+
+            rec.onresult = function (event) {
+                resetSilenceTimer();
+                let interim = '';
+                let final = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const result = event.results[i];
+                    if (result.isFinal) {
+                        final += result[0].transcript;
+                    } else {
+                        interim += result[0].transcript;
+                    }
+                }
+                const input = document.getElementById('chatInput');
+                const micStatus = document.getElementById('micStatus');
+                if (final) {
+                    fullVoiceText += ' ' + final;
+                    input.value = fullVoiceText.trim();
+                    input.style.height = 'auto';
+                    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+                    if (micStatus) {
+                        micStatus.textContent = 'Распознано';
+                        micStatus.className = 'mic-status';
+                    }
+                    fetch('/speech', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: final })
+                    }).catch(err => console.error('[VOICE] Ошибка отправки:', err));
+                } else if (interim) {
+                    input.value = (fullVoiceText.trim() + ' ' + interim).trim();
+                    input.style.height = 'auto';
+                    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+                    if (micStatus) {
+                        micStatus.textContent = 'Распознаю...';
+                        micStatus.className = 'mic-status listening';
+                    }
+                }
+            };
+
+            rec.onend = function () {
+                clearTimeout(silenceTimer);
+                if (isRecording) {
+                    setTimeout(() => {
+                        try {
+                            rec.start();
+                            resetSilenceTimer();
+                        } catch (e) {
+                            console.error('[VOICE] restart error:', e);
+                        }
+                    }, 400);
+                } else {
+                    resetVoiceUI();
+                }
+            };
+
+            rec.onerror = function (event) {
+                console.error('[VOICE] Speech error:', event.error);
+                const micStatus = document.getElementById('micStatus');
+                if (event.error === 'not-allowed') {
+                    if (micStatus) micStatus.textContent = 'Нет доступа к микрофону';
+                    resetVoiceUI();
+                    return;
+                }
+                if (event.error === 'no-speech') {
+                    if (micStatus) micStatus.textContent = 'Тишина';
+                    return;
+                }
+                if (micStatus) micStatus.textContent = 'Ошибка: ' + event.error;
+            };
+
+            return rec;
+        }
+
+        function resetVoiceUI() {
+            const micBtn = document.getElementById('micBtn');
+            const micStatus = document.getElementById('micStatus');
+            isRecording = false;
+            if (micBtn) micBtn.classList.remove('recording');
+            if (micStatus) {
+                micStatus.textContent = '';
+                micStatus.className = 'mic-status';
+            }
+            clearTimeout(silenceTimer);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const micBtn = document.getElementById('micBtn');
+            if (micBtn) {
+                micBtn.addEventListener('click', async function () {
+                    if (isRecording) {
+                        isRecording = false;
+                        if (recognition) recognition.stop();
+                        const micStatus = document.getElementById('micStatus');
+                        if (micStatus) micStatus.textContent = 'Запись остановлена';
+                        return;
+                    }
+                    if (!SpeechRecognition) {
+                        micBtn.disabled = true;
+                        const micStatus = document.getElementById('micStatus');
+                        if (micStatus) micStatus.textContent = 'Не поддерживается';
+                        return;
+                    }
+                    const permitted = await requestMicPermission();
+                    if (!permitted) return;
+                    if (!recognition) {
+                        recognition = initRecognition();
+                        if (!recognition) return;
+                    }
+                    try {
+                        recognition.start();
+                        resetSilenceTimer();
+                        isRecording = true;
+                        micBtn.classList.add('recording');
+                        const micStatus = document.getElementById('micStatus');
+                        if (micStatus) {
+                            micStatus.textContent = 'Слушаю...';
+                            micStatus.className = 'mic-status listening';
+                        }
+                        const input = document.getElementById('chatInput');
+                        fullVoiceText = input.value.trim() ? input.value.trim() : '';
+                    } catch (e) {
+                        console.error('[VOICE] start error:', e);
+                        resetVoiceUI();
+                    }
+                });
+            }
+        });
+
+        function renderTable() {
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('emptyState');
+
+            if (!tableColumns.length) {
+                emptyState.style.display = 'block';
+                document.getElementById('dataTable').style.display = 'none';
+                updateRowCount();
+                saveTableData();
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            document.getElementById('dataTable').style.display = 'table';
+
+            thead.innerHTML = '';
+            const headerRow = document.createElement('tr');
+            tableColumns.forEach((col, idx) => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                th.contentEditable = 'true';
+                th.addEventListener('blur', function() {
+                    tableColumns[idx] = this.textContent.trim();
+                    saveTableData();
+                });
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+
+            tbody.innerHTML = '';
+            tableRows.forEach((row, rowIdx) => {
+                const tr = document.createElement('tr');
+                tableColumns.forEach((_, colIdx) => {
+                    const td = document.createElement('td');
+                    td.contentEditable = 'true';
+                    const val = row[colIdx];
+                    td.textContent = val !== null && val !== undefined ? String(val) : '';
+                    td.dataset.row = rowIdx;
+                    td.dataset.col = colIdx;
+                    td.addEventListener('blur', function() {
+                        const r = parseInt(this.dataset.row);
+                        const c = parseInt(this.dataset.col);
+                        let newVal = this.textContent.trim();
+                        if (newVal === '' || newVal.toLowerCase() === 'null') {
+                            tableRows[r][c] = null;
+                        } else if (!isNaN(newVal) && newVal !== '') {
+                            tableRows[r][c] = newVal.includes('.') ? parseFloat(newVal) : parseInt(newVal, 10);
+                        } else {
+                            tableRows[r][c] = newVal;
+                        }
+                        saveTableData();
+                    });
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+
+            updateRowCount();
+            saveTableData();
+        }
+
+        function updateRowCount() {
+            document.getElementById('rowCount').textContent =
+                `${tableRows.length} строк, ${tableColumns.length} колонок`;
+        }
+
+        // =============================================
+        // УПРАВЛЕНИЕ ТАБЛИЦЕЙ
+        // =============================================
+        function addRow() {
+            if (!tableColumns.length) {
+                alert('Сначала добавьте колонки');
+                return;
+            }
+            const newRow = new Array(tableColumns.length).fill(null);
+            tableRows.push(newRow);
+            renderTable();
+            const container = document.getElementById('tableContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addColumn() {
+            const name = prompt('Название новой колонки:', 'column_' + (tableColumns.length + 1));
+            if (!name) return;
+            tableColumns.push(name.trim());
+            tableRows.forEach(row => row.push(null));
+            renderTable();
+        }
+
+        function deleteLastRow() {
+            if (tableRows.length === 0) return;
+            if (confirm('Удалить последнюю строку?')) {
+                tableRows.pop();
+                renderTable();
+            }
+        }
+
+        function deleteLastColumn() {
+            if (tableColumns.length === 0) return;
+            if (confirm(`Удалить колонку "${tableColumns[tableColumns.length - 1]}"?`)) {
+                tableColumns.pop();
+                tableRows.forEach(row => row.pop());
+                renderTable();
+            }
+        }
+
+        function exportTableExcel() {
+            if (!tableColumns.length || !tableRows.length) {
+                alert('Нет данных для экспорта в Excel');
+                return;
+            }
+            downloadExcel(tableColumns, tableRows, 'table.xlsx');
+        }
+
+        function triggerImportExcel() {
+            const input = document.getElementById('excelFileInput');
+            if (input) {
+                input.value = '';
+                input.click();
+            }
+        }
+
+        function parseExcelCellValue(value) {
+            if (value === null || value === undefined || value === '') {
+                return null;
+            }
+            const text = String(value).trim();
+            if (text === '') return null;
+            if (!isNaN(text) && text !== '') {
+                return text.includes('.') ? parseFloat(text) : parseInt(text, 10);
+            }
+            return text;
+        }
+
+        function importExcelFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            if (!window.XLSX) {
+                alert('Не удалось загрузить библиотеку XLSX.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+                    if (!aoa || aoa.length === 0) {
+                        alert('Файл Excel пуст.');
+                        return;
+                    }
+
+                    const columns = aoa[0].map((cell, idx) => cell !== null && cell !== undefined && String(cell).trim() !== '' ? String(cell).trim() : 'column_' + (idx + 1));
+                    const rows = aoa.slice(1).map(row => {
+                        const values = [];
+                        for (let i = 0; i < columns.length; i++) {
+                            values.push(parseExcelCellValue(row[i]));
+                        }
+                        return values;
+                    });
+
+                    if (!confirm(`Импортировать ${rows.length} строк и ${columns.length} колонок из Excel и заменить текущую таблицу?`)) {
+                        return;
+                    }
+
+                    tableColumns = columns;
+                    tableRows = rows;
+                    document.getElementById('sqlPreview').textContent = 'Данные импортированы из Excel';
+                    document.getElementById('sqlPreview').title = 'Импорт данных из Excel';
+                    renderTable();
+                } catch (err) {
+                    console.error('Ошибка импорта Excel:', err);
+                    alert('Ошибка при чтении файла Excel: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function openChartFromTable() {
+            if (!tableColumns.length || !tableRows.length) {
+                alert('Нет данных для построения графика');
+                return;
+            }
+            saveTableData();
+            localStorage.setItem('chatTableData', JSON.stringify({
+                sql_query: document.getElementById('sqlPreview').title || '',
+                columns: tableColumns,
+                rows: tableRows
+            }));
+            window.open('/graf?table_mode=1', '_blank');
+        }
+
+        // =============================================
+        // СКАЧИВАНИЕ (как в chat.html — raw content без HTML)
+        // =============================================
+        function getLastAssistantRawContent() {
+            const allMessages = document.querySelectorAll('#chatMessages .message.assistant:not(.loading-msg)');
+            if (allMessages.length === 0) return '';
+            const lastMsg = allMessages[allMessages.length - 1];
+            const raw = lastMsg.getAttribute('data-raw-content');
+            if (raw) return raw;
+            const contentDiv = lastMsg.querySelector('.markdown-content');
+            return contentDiv ? contentDiv.textContent : '';
+        }
+
+        function downloadTableText() {
+            const content = getLastAssistantRawContent();
+            if (!content) {
+                if (tableColumns.length && tableRows.length) {
+                    downloadTableAsText(tableColumns, tableRows, 'table.txt');
+                } else {
+                    alert('Нет содержимого для скачивания');
+                }
+                return;
+            }
+            // content уже чистый текст (без HTML) — скачиваем как есть
+            downloadAsText(content, 'table.txt', 'markdown');
+        }
+
+        function downloadTableDocx() {
+            const content = getLastAssistantRawContent();
+            if (!content) {
+                alert('Нет содержимого для скачивания');
+                return;
+            }
+            const payload = { content: content };
+            if (tableColumns && tableColumns.length) {
+                payload.table_columns = tableColumns;
+                payload.table_rows = tableRows;
+            }
+            downloadDocx(payload, 'table.docx');
+        }
+
+        // =============================================
+        // TOOLBAR DOWNLOAD MENU
+        // =============================================
+        function toggleToolbarDownloadMenu(event) {
+            event.stopPropagation();
+            event.preventDefault();
+            const menu = document.getElementById('tableToolbarDownloadMenu');
+            if (!menu) return;
+            document.querySelectorAll('.dl-dropdown-menu.show').forEach(function(m) {
+                if (m !== menu) m.classList.remove('show');
+            });
+            menu.classList.toggle('show');
+        }
+
+        document.addEventListener('click', function(e) {
+            document.querySelectorAll('.dl-dropdown-menu.show').forEach(function(menu) {
+                if (!menu.contains(e.target) && !menu.parentElement.contains(e.target)) {
+                    menu.classList.remove('show');
+                }
+            });
+        });
+
+        // =============================================
+        // ПОЛУЧИТЬ ТЕКУЩИЕ ДАННЫЕ ТАБЛИЦЫ
+        // =============================================
+        function getCurrentTableData() {
+            return {
+                columns: tableColumns,
+                rows: tableRows
+            };
+        }
+
+        // =============================================
+        // ЧАТ ПО ДАННЫМ ТАБЛИЦЫ — ИСПРАВЛЕНО: передаём answer_raw
+        // =============================================
+        async function askTableChat() {
+            const input = document.getElementById('chatInput');
+            const question = input.value.trim();
+            if (!question) return;
+
+            if (!tableColumns.length || !tableRows.length) {
+                alert('Нет данных таблицы для анализа');
+                return;
+            }
+
+            const askBtn = document.getElementById('askBtn');
+            askBtn.disabled = true;
+            askBtn.textContent = '...';
+            input.value = '';
+
+            addMessage('user', question);
+            const loadingId = addLoadingMessage();
+
+            try {
+                const tableData = getCurrentTableData();
+
+                const response = await fetch('/table_chat_ask', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        question: question,
+                        table_columns: tableData.columns,
+                        table_rows: tableData.rows,
+                        history: chatHistory
+                    })
+                });
+
+                const data = await response.json();
+                removeLoadingMessage(loadingId);
+
+                if (data.status === 'ok') {
+                    // ===== ИСПРАВЛЕНИЕ: передаём answer_raw как rawContent =====
+                    addMessage('assistant', data.answer, true, data.answer_raw || data.answer);
+                    chatHistory.push({role: 'user', content: question});
+                    chatHistory.push({role: 'assistant', content: data.answer_raw || data.answer});
+                } else {
+                    addMessage('assistant', '❌ Ошибка: ' + data.message);
+                }
+            } catch (err) {
+                removeLoadingMessage(loadingId);
+                addMessage('assistant', '❌ Ошибка соединения: ' + err);
+            }
+
+            askBtn.disabled = false;
+            askBtn.textContent = 'Спросить';
+            input.focus();
+        }
+
+        // =============================================
+        // УПРАВЛЕНИЕ СООБЩЕНИЯМИ — ИСПРАВЛЕНО: 4-й параметр rawContent
+        // =============================================
+        function parseHtmlTable(table) {
+            const header = [];
+            const rows = [];
+            const thead = table.querySelector('thead');
+            let dataRows = [];
+
+            if (thead) {
+                const headerCells = thead.querySelectorAll('th,td');
+                headerCells.forEach(cell => header.push(cell.textContent.trim()));
+                dataRows = Array.from(table.querySelectorAll('tbody tr'));
+            } else {
+                const allRows = Array.from(table.querySelectorAll('tr'));
+                if (allRows.length) {
+                    const firstRow = allRows[0];
+                    const firstRowCells = firstRow.querySelectorAll('th');
+                    if (firstRowCells.length) {
+                        firstRowCells.forEach(cell => header.push(cell.textContent.trim()));
+                        dataRows = allRows.slice(1);
+                    } else {
+                        const firstCells = firstRow.querySelectorAll('td');
+                        if (firstCells.length) {
+                            firstCells.forEach((cell, idx) => header.push(cell.textContent.trim() || 'column_' + (idx + 1)));
+                            dataRows = allRows.slice(1);
+                        }
+                    }
+                }
+            }
+
+            if (!header.length) {
+                const firstRow = table.querySelector('tr');
+                if (firstRow) {
+                    const cells = firstRow.querySelectorAll('td,th');
+                    cells.forEach((cell, idx) => header.push(cell.textContent.trim() || 'column_' + (idx + 1)));
+                    dataRows = Array.from(table.querySelectorAll('tr')).slice(1);
+                }
+            }
+
+            dataRows.forEach(row => {
+                const rowCells = row.querySelectorAll('td,th');
+                if (rowCells.length === 0) return;
+                const rowData = [];
+                rowCells.forEach(cell => {
+                    rowData.push(parseExcelCellValue(cell.textContent));
+                });
+                if (rowData.length > 0) rows.push(rowData);
+            });
+
+            return { columns: header, rows };
+        }
+
+        function replaceTableData(columns, rows) {
+            tableColumns = columns;
+            tableRows = rows;
+            renderTable();
+        }
+
+        // ===== ИСПРАВЛЕННАЯ addMessage с 4-м параметром rawContent =====
+        function addMessage(role, content, isHtml = false, rawContent = null) {
+            const container = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = 'message ' + role;
+
+            if (role === 'assistant') {
+                const label = document.createElement('div');
+                label.className = 'msg-label';
+                label.textContent = 'Ассистент';
+                div.appendChild(label);
+            }
+
+            const textDiv = document.createElement('div');
+            if (isHtml) {
+                textDiv.className = 'markdown-content';
+                textDiv.innerHTML = content;
+            } else {
+                textDiv.textContent = content;
+            }
+            div.appendChild(textDiv);
+
+            if (role === 'assistant') {
+                // ===== ИСПРАВЛЕНИЕ: сохраняем чистый текст (без HTML) в data-raw-content =====
+                const cleanText = rawContent || (isHtml ? stripHtml(content) : content);
+                div.setAttribute('data-raw-content', cleanText);
+
+                // ===== ЕДИНАЯ КНОПКА СКАЧИВАНИЯ С DROPDOWN (как в chat.html) =====
+                const btnContainer = document.createElement('div');
+                btnContainer.className = 'download-buttons';
+
+                const dlWrapper = document.createElement('div');
+                dlWrapper.className = 'dl-dropdown-wrapper';
+
+                const dlBtn = document.createElement('button');
+                dlBtn.className = 'dl-btn btn-download';
+                dlBtn.innerHTML = 'Скачать ▾';
+                dlBtn.type = 'button';
+                dlBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    document.querySelectorAll('.dl-dropdown-menu.show').forEach(function(m) {
+                        if (m !== dlMenu) m.classList.remove('show');
+                    });
+                    dlMenu.classList.toggle('show');
+                };
+
+                const dlMenu = document.createElement('div');
+                dlMenu.className = 'dl-dropdown-menu';
+
+                // Word
+                const itemWord = document.createElement('button');
+                itemWord.className = 'dl-dropdown-item';
+                itemWord.type = 'button';
+                itemWord.innerHTML = '<span class="dl-icon">📄</span><span class="dl-label">Word</span><span class="dl-ext">.docx</span>';
+                itemWord.onclick = function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    dlMenu.classList.remove('show');
+                    downloadTableDocx();
+                };
+                dlMenu.appendChild(itemWord);
+
+                // Text
+                const itemText = document.createElement('button');
+                itemText.className = 'dl-dropdown-item';
+                itemText.type = 'button';
+                itemText.innerHTML = '<span class="dl-icon">📝</span><span class="dl-label">Text</span><span class="dl-ext">.txt</span>';
+                itemText.onclick = function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    dlMenu.classList.remove('show');
+                    downloadTableText();
+                };
+                dlMenu.appendChild(itemText);
+
+                // Разделитель
+                const divider = document.createElement('div');
+                divider.className = 'dl-dropdown-divider';
+                dlMenu.appendChild(divider);
+
+                // Excel (только если есть таблица)
+                const hasTable = tableColumns && tableColumns.length > 0 && tableRows && tableRows.length > 0;
+                const itemExcel = document.createElement('button');
+                itemExcel.className = 'dl-dropdown-item' + (hasTable ? '' : ' dl-disabled');
+                itemExcel.type = 'button';
+                itemExcel.innerHTML = '<span class="dl-icon">📊</span><span class="dl-label">Excel</span><span class="dl-ext">.xlsx</span>';
+                itemExcel.title = hasTable ? 'Скачать таблицу в Excel' : 'Нет данных таблицы — добавьте данные';
+                itemExcel.onclick = function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    dlMenu.classList.remove('show');
+                    if (hasTable) {
+                        downloadExcel(tableColumns, tableRows, 'table.xlsx');
+                    }
+                };
+                dlMenu.appendChild(itemExcel);
+
+                dlWrapper.appendChild(dlBtn);
+                dlWrapper.appendChild(dlMenu);
+                btnContainer.appendChild(dlWrapper);
+                div.appendChild(btnContainer);
+
+                // Если в ответе есть HTML-таблица — кнопка "Заместить исходную таблицу"
+                if (isHtml) {
+                    const tableElement = textDiv.querySelector('table');
+                    if (tableElement) {
+                        const replaceBtn = document.createElement('button');
+                        replaceBtn.className = 'btn-main';
+                        replaceBtn.style.marginTop = '10px';
+                        replaceBtn.style.fontSize = '12px';
+                        replaceBtn.style.padding = '6px 12px';
+                        replaceBtn.textContent = 'Заместить исходную таблицу';
+                        replaceBtn.addEventListener('click', function() {
+                            const parsed = parseHtmlTable(tableElement);
+                            if (!parsed.columns.length || !parsed.rows.length) {
+                                alert('Не удалось извлечь таблицу из ответа.');
+                                return;
+                            }
+                            if (!confirm('Заменить текущие данные таблицы на таблицу из ответа?')) {
+                                return;
+                            }
+                            replaceTableData(parsed.columns, parsed.rows);
+                        });
+                        div.appendChild(replaceBtn);
+                    }
+                }
+            }
+
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        let loadingCounter = 0;
+        function addLoadingMessage() {
+            const container = document.getElementById('chatMessages');
+            const id = 'loading-' + (++loadingCounter);
+            const div = document.createElement('div');
+            div.className = 'message assistant loading-msg';
+            div.id = id;
+            const label = document.createElement('div');
+            label.className = 'msg-label';
+            label.textContent = 'Ассистент';
+            div.appendChild(label);
+            const indicator = document.createElement('div');
+            indicator.className = 'typing-indicator';
+            indicator.innerHTML = '<span></span><span></span><span></span>';
+            div.appendChild(indicator);
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return id;
+        }
+
+        function removeLoadingMessage(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        // =============================================
+        // АВТОRESIZE TEXTAREA
+        // =============================================
+        const chatInput = document.getElementById('chatInput');
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+        });
+
+        // =============================================
+        // ИНИЦИАЛИЗАЦИЯ
+        // =============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            const excelInput = document.getElementById('excelFileInput');
+            if (excelInput) {
+                excelInput.addEventListener('change', importExcelFile);
+            }
+        });
+    </script>
+</body>
+</html>

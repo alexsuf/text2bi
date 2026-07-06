@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Провайдеры{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Провайдеры LLM</h2>
+    <a href="/providers/create" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Создать провайдер</a>
+</div>
+<div class="card">
+    <div class="card-body">
+        {% if providers %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead><tr><th>#</th><th>Название</th><th>Тип</th><th>Base URL</th><th>Статус</th><th>Создан</th><th class="text-end">Действия</th></tr></thead>
+                <tbody>{% for p in providers %}<tr>
+                    <td>{{ p.provider_number }}</td>
+                    <td><strong>{{ p.name }}</strong></td>
+                    <td><span class="badge bg-info">{{ p.provider_type }}</span></td>
+                    <td><code>{{ p.base_url }}</code></td>
+                    <td>{% if p.enabled %}<span class="badge bg-success">Включён</span>{% else %}<span class="badge bg-secondary">Выключен</span>{% endif %}</td>
+                    <td>{{ p.created_at.strftime('%d.%m.%Y') if p.created_at else '-' }}</td>
+                    <td class="text-end">
+                        <a href="/providers/edit/{{ p.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                        <form action="/providers/delete/{{ p.id }}" method="post" class="d-inline mb-0" onsubmit="return confirm('Удалить провайдер?')"><button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+                    </td>
+                </tr>{% endfor %}</tbody>
+            </table>
+        </div>
+        {% else %}<p class="text-muted text-center py-4">Нет провайдеров</p>{% endif %}
+    </div>
+</div>
+{% endblock %}

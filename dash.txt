@@ -1,0 +1,15 @@
+Создаем новую базу Postgres:
+docker compose up -d dash_db
+
+Создаем базу для Redash:
+docker compose run --rm server create_db
+
+
+docker exec -it dash_server manage users create --email admin@example.com --password secret --name admin
+
+  "redash": "dcmjDqSLz1QW1hrCfW72FJOYM6Li1KCp45sB6ZmP",
+  "redash_url": "http://dash_server:5002/api/queries",\
+
+curl -X POST http://localhost:5002/api/queries -H "Authorization: Key dcmjDqSLz1QW1hrCfW72FJOYM6Li1KCp45sB6ZmP" -H "Content-Type: application/json" -d '{ "name":"Test API", "query":"SELECT 1;", "data_source_id":1 }'  
+
+  

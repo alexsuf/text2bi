@@ -1,0 +1,3 @@
+# Логируем параметры запроса к OpenAI API
+
+{'messages': messages, 'timeout': timeout}

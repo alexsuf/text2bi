@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Таблица{% endblock %}
+{% block extra_css %}
+.toolbar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
+.btn { padding:8px 16px; border-radius:6px; border:none; font-size:13px; cursor:pointer; font-weight:500; transition:.15s; }
+.btn-red { background:#dc3545; color:#fff; }
+.btn-red:hover { background:#bb2d3b; }
+.btn-outline { background:transparent; color:#0d6efd; border:1px solid #0d6efd; }
+.btn-outline:hover { background:#0d6efd; color:#fff; }
+.table-wrap { overflow:auto; max-height:calc(100vh - 240px); background:#fff; border:none; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+.table-wrap table { border-collapse:collapse; font-size:13px; width:100%; }
+.table-wrap th { background:#f1f3f5; color:#495057; font-weight:600; padding:8px 12px; border-bottom:2px solid #dee2e6; position:sticky; top:0; z-index:1; cursor:pointer; }
+.table-wrap th:hover { background:#e9ecef; }
+.table-wrap td { padding:6px 12px; border-bottom:1px solid #f1f3f5; color:#212529; }
+.table-wrap tr:hover td { background:#f8f9fa; }
+.table-wrap td[contenteditable="true"]:focus { background:#cfe2ff; outline:none; }
+{% endblock %}
+
+{% block content %}
+<h2 style="color:#1a1e2e; margin-bottom:12px;">Работа с таблицей</h2>
+<div class="toolbar">
+    <button class="btn btn-outline" onclick="addRow()">+ Строка</button>
+    <button class="btn btn-outline" onclick="addCol()">+ Колонка</button>
+    <button class="btn btn-red" onclick="delRow()">− Строка</button>
+    <button class="btn btn-red" onclick="delCol()">− Колонка</button>
+    <button class="btn btn-outline" onclick="openGraf()">График</button>
+    <button class="btn btn-outline" onclick="exportExcel()">Excel</button>
+    <span id="rowCount" style="color:#6c757d;font-size:13px;margin-left:auto;">0 строк, 0 колонок</span>
+</div>
+<div class="table-wrap" id="tableContainer">
+    <table id="dataTable"><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table>
+    <div id="emptyMsg" style="text-align:center;color:#6c757d;padding:40px;">Нет данных. Откройте эту страницу из режима чата после выполнения SQL-запроса.</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+let cols = [], rows = [];
+function load() { const d = localStorage.getItem('chatTableData'); if (d) { const p = JSON.parse(d); cols = p.columns||[]; rows = p.rows||[]; } render(); }
+function save() { localStorage.setItem('chatTableData', JSON.stringify({columns:cols, rows:rows})); }
+function render() { const th = document.getElementById('tableHead'), tb = document.getElementById('tableBody'), em = document.getElementById('emptyMsg'), dt = document.getElementById('dataTable'); if (!cols.length) { em.style.display='block'; dt.style.display='none'; updateCount(); return; } em.style.display='none'; dt.style.display='table'; th.innerHTML = '<tr>'+cols.map((c,i)=>`<th contenteditable="true" onblur="cols[${i}]=this.textContent.trim();save();">${c}</th>`).join('')+'</tr>'; tb.innerHTML = rows.map((r,ri)=>'<tr>'+cols.map((_,ci)=>`<td contenteditable="true" onblur="updateCell(${ri},${ci},this.textContent)">${r[ci]!==null&&r[ci]!==undefined?String(r[ci]):''}</td>`).join('')+'</tr>').join(''); updateCount(); save(); }
+function updateCell(r,c,v) { let val = v.trim(); if (val===''||val.toLowerCase()==='null') rows[r][c]=null; else if (!isNaN(val)&&val!=='') rows[r][c]=val.includes('.')?parseFloat(val):parseInt(val); else rows[r][c]=val; save(); }
+function updateCount() { document.getElementById('rowCount').textContent = `${rows.length} строк, ${cols.length} колонок`; }
+function addRow() { if(!cols.length) return alert('Добавьте колонки'); rows.push(new Array(cols.length).fill(null)); render(); }
+function addCol() { const n=prompt('Название колонки:','col_'+(cols.length+1)); if(n){cols.push(n.trim());rows.forEach(r=>r.push(null));render();} }
+function delRow() { if(rows.length&&confirm('Удалить последнюю строку?')){rows.pop();render();} }
+function delCol() { if(cols.length&&confirm('Удалить колонку "'+cols[cols.length-1]+'"?')){cols.pop();rows.forEach(r=>r.pop());render();} }
+function openGraf() { window.open('/graf?table_mode=1', '_blank'); }
+function exportExcel() { if(!cols.length||!rows.length) return alert('Нет данных'); const wb=XLSX.utils.book_new();wb.SheetNames.push('Data'); wb.Sheets.Data=XLSX.utils.aoa_to_sheet([cols,...rows]); XLSX.writeFile(wb,'table.xlsx'); }
+load();
+</script>
+{% endblock %}

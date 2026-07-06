@@ -1,0 +1,274 @@
+Запрос: Доходы по регионам?
+SQL: SELECT region, SUM(revenue) FROM mart_finance GROUP BY region;
+
+Запрос: Сколько активных заявок?
+SQL: SELECT status, COUNT(*) FROM service_requests WHERE status IN ('Открыта','В работе') GROUP BY status;
+
+Запрос: выполнения SLA?
+SQL: SELECT ROUND(AVG(CASE WHEN duration_hours <= 24 THEN 1 ELSE 0 END)*100,2) AS sla_percent FROM service_requests WHERE request_type = 'Инцидент' AND status = 'Закрыта';
+
+
+Запрос: худшие регионы по SLA?
+SQL: SELECT r.name, AVG(CASE WHEN sr.duration_hours <= 24 THEN 1 ELSE 0 END) AS sla_rate FROM service_requests sr JOIN service_objects so ON sr.object_id = so.id JOIN clients c ON so.client_id = c.id JOIN regions r ON c.region_id = r.id WHERE sr.status = 'Закрыта' GROUP BY r.name ORDER BY sla_rate ASC;
+
+Запрос: Топ инженеров
+SQL: SELECT e.full_name, COUNT(*) AS closed_requests FROM engineers e JOIN service_requests sr ON e.id = sr.engineer_id WHERE sr.status = 'Закрыта' GROUP BY e.full_name ORDER BY closed_requests DESC LIMIT 10;
+
+Запрос: кто работает дольше всех
+SQL: SELECT
+    e.full_name,
+    AVG(sr.duration_hours) AS avg_time
+FROM engineers e
+JOIN service_requests sr ON e.id = sr.engineer_id
+WHERE sr.status = 'Закрыта'
+GROUP BY e.full_name
+ORDER BY avg_time DESC;
+
+
+Запрос: нагрузка по регионам
+SQL: 
+SELECT
+    r.name,
+    COUNT(*) AS requests,
+    SUM(duration_hours) AS hours
+FROM service_requests sr
+JOIN service_objects so ON sr.object_id = so.id
+JOIN clients c ON so.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+GROUP BY r.name;
+
+
+Запрос: нагрузка по типу объектов
+SQL: 
+SELECT
+    so.type,
+    COUNT(*) AS cnt,
+    AVG(duration_hours) AS avg_time
+FROM service_requests sr
+JOIN service_objects so ON sr.object_id = so.id
+GROUP BY so.type;
+
+
+Запрос: Заявки по месяцам
+SQL: SELECT
+    date_trunc('month', created_at) AS month,
+    COUNT(*) AS requests
+FROM service_requests
+GROUP BY month
+ORDER BY month;
+
+Запрос: топ клиентов по прибыли
+SQL: 
+SELECT
+    c.name,
+    SUM(f.revenue - f.costs) AS profit
+FROM finance f
+JOIN clients c ON f.client_id = c.id
+GROUP BY c.name
+ORDER BY profit DESC
+LIMIT 10;
+
+Запрос: корреляция: больше заявок → меньше прибыль?
+SQL: SELECT
+SQL: SELECT
+    c.name,
+    COUNT(sr.id) AS requests,
+    SUM(f.revenue - f.costs) AS profit
+FROM clients c
+LEFT JOIN service_objects so ON c.id = so.client_id
+LEFT JOIN service_requests sr ON so.id = sr.object_id
+LEFT JOIN finance f ON c.id = f.client_id
+GROUP BY c.name;
+
+Запрос: самые проблемные клиенты
+SQL: 
+SELECT
+    c.name,
+    COUNT(sr.id) AS incidents
+FROM clients c
+JOIN service_objects so ON c.id = so.client_id
+JOIN service_requests sr ON so.id = sr.object_id
+WHERE sr.request_type = 'Инцидент'
+GROUP BY c.name
+ORDER BY incidents DESC;
+
+Запрос: где больше всего инцидентов
+SQL: SELECT
+    r.name AS region,
+    COUNT(*) AS total_incidents
+FROM service_requests sr
+JOIN service_objects so ON sr.object_id = so.id
+JOIN clients c ON so.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+WHERE sr.status IN ('Открыта','В работе')
+GROUP BY r.name
+ORDER BY total_incidents DESC
+LIMIT 1;
+
+Запрос: какие клиенты самые убыточные
+SQL: SELECT 
+    c.name,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS profit
+FROM finance f
+JOIN clients c ON f.client_id = c.id
+GROUP BY c.name
+ORDER BY profit ASC
+LIMIT 1000;
+
+Запрос: 5 самых загруженных инженеров
+SQL: SELECT full_name, total_requests, total_hours, avg_time FROM mart_top_engineers ORDER BY total_requests DESC LIMIT 5;
+
+Запрос: какие инженеры работают с банкоматами
+SQL: SELECT e.full_name FROM engineers e JOIN engineer_skills es ON e.id = es.engineer_id WHERE es.object_type like 'Банкомат' LIMIT 1000;
+
+Запрос: самый плохой регион по SLA
+SQL: SELECT
+    r.name,
+    1 - AVG(m.sla_rate) AS sla_violations_rate
+FROM mart_sla_region m
+JOIN regions r
+    ON m.region = r.name
+GROUP BY r.name
+ORDER BY sla_violations_rate DESC
+LIMIT 1;
+
+Запрос: число инцидентов в самом плохом регионе по SLA по месяцам
+SQL: SELECT
+    date_trunc('month', sr.created_at) AS month,
+    COUNT(*) AS incidents
+FROM service_requests sr
+JOIN service_objects so
+    ON sr.object_id = so.id
+JOIN clients c
+    ON so.client_id = c.id
+JOIN regions r
+    ON c.region_id = r.id
+WHERE sr.request_type = 'Инцидент'
+  AND sr.status IN ('Открыта', 'В работе')
+  AND r.name = (
+        SELECT region
+        FROM mart_sla_region
+        GROUP BY region
+        ORDER BY 1 - AVG(sla_rate) DESC
+        LIMIT 1
+  )
+GROUP BY month
+ORDER BY month;
+
+Запрос: топ 10 инженеров, которые работают с кассами максимально часто
+SQL: SELECT
+    e.full_name,
+    COUNT(*) AS total_requests
+FROM service_requests sr
+JOIN engineer_skills es
+    ON sr.engineer_id = es.engineer_id
+JOIN engineers e
+    ON sr.engineer_id = e.id
+WHERE es.object_type = 'Касса'
+GROUP BY e.full_name
+ORDER BY total_requests DESC
+LIMIT 10;
+
+Запрос: Cамый плохой регион по SLA
+SQL: SELECT
+    region,
+    AVG(sla_rate) AS sla_rate
+FROM mart_sla_region
+GROUP BY region
+ORDER BY sla_rate ASC
+LIMIT 1;
+
+Запрос: количество заявок по месяцам в самом плохом регионе по SLA
+SQL: SELECT date_trunc('month', sr.created_at) AS month, COUNT(*) AS request_count 
+FROM service_requests sr 
+JOIN service_objects so ON sr.object_id = so.id 
+JOIN clients c ON so.client_id = c.id 
+JOIN regions r ON c.region_id = r.id 
+WHERE r.id = (
+    SELECT r.id 
+    FROM mart_sla_region msr 
+    JOIN regions r ON msr.region = r.name 
+    GROUP BY r.id 
+    ORDER BY AVG(msr.sla_rate) ASC 
+    LIMIT 1
+) 
+GROUP BY month 
+ORDER BY month;
+
+Запрос: баланс по регионам
+SQL: SELECT r.name AS region, SUM(f.revenue - f.costs) AS balance
+FROM regions r
+JOIN clients c ON r.id = c.region_id
+JOIN finance f ON c.id = f.client_id
+GROUP BY r.name LIMIT 1000;
+
+Запрос: последние 10 инцидентов в самом плохом регионе по SLA
+SQL: SELECT sr.id, sr.created_at, sr.status, sr.request_type, sr.duration_hours
+FROM service_requests sr
+JOIN service_objects so ON sr.object_id = so.id
+JOIN clients c ON so.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+WHERE r.id = (
+    SELECT r2.id
+    FROM mart_sla_region msr
+    JOIN regions r2 ON msr.region = r2.name
+    ORDER BY msr.sla_rate ASC
+    LIMIT 1
+)
+AND sr.request_type = 'Инцидент'
+ORDER BY sr.created_at DESC
+LIMIT 10;
+
+Запрос: среднее время ремонта банкоматов по 5 самым прибыльным клиентам, какие имена клиентов, их телефон и контактное лицо
+SQL: SELECT 
+    c.name AS client_name, 
+    cc.contact_name, 
+    cc.phone, 
+    AVG(sr.duration_hours) AS average_repair_time,
+    f.revenue,
+    f.costs,
+    (f.revenue - f.costs) AS profit
+FROM 
+    clients c
+JOIN 
+    service_objects so ON c.id = so.client_id
+JOIN 
+    service_requests sr ON so.id = sr.object_id
+JOIN 
+    client_contacts cc ON c.id = cc.client_id
+LEFT JOIN 
+    finance f ON c.id = f.client_id AND f.month = (
+        SELECT MAX(month) FROM finance WHERE client_id = c.id
+    )
+WHERE 
+    so.type = 'Банкомат' 
+    AND sr.request_type = 'Инцидент' 
+    AND sr.status = 'Закрыта'
+GROUP BY 
+    c.name, cc.contact_name, cc.phone, f.revenue, f.costs
+ORDER BY 
+    (f.revenue - f.costs) DESC
+LIMIT 5;
+
+Запрос: какие инженеры больше всего работали с кассами в прошлом месяце, имя региона, квалификация и телефон каждого инженера
+SQL: SELECT 
+  e.full_name,
+  r.name AS region_name,
+  e.skill_level,
+  -- добавляем первый телефон инженера
+  (SELECT phone FROM engineer_contacts ec WHERE ec.engineer_id = e.id LIMIT 1) AS phone
+FROM engineers e
+JOIN engineer_skills es ON e.id = es.engineer_id
+JOIN regions r ON e.region_id = r.id
+JOIN service_requests sr ON e.id = sr.engineer_id
+JOIN service_objects so ON sr.object_id = so.id
+WHERE 
+  es.object_type = 'Касса'
+  AND sr.created_at >= date_trunc('month', current_date - interval '1 month')
+  AND sr.created_at < date_trunc('month', current_date)
+GROUP BY e.id, e.full_name, r.name, e.skill_level
+ORDER BY COUNT(*) DESC
+LIMIT 200;
+

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}График{% endblock %}
+{% block extra_css %}
+.chart-container { background:#fff; border:none; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+.card { background:#fff; border:none; border-radius:10px; padding:16px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+.btn { padding:8px 18px; border-radius:6px; border:none; font-size:13px; cursor:pointer; font-weight:500; }
+.btn-primary { background:#0d6efd; color:#fff; }
+.btn-primary:hover { background:#0b5ed7; }
+{% endblock %}
+
+{% block content %}
+<h2 style="color:#1a1e2e;">Построение графика</h2>
+<div class="card">
+    <label style="color:#495057;font-size:12px;text-transform:uppercase;margin-bottom:8px;display:block;font-weight:500;">SQL-запрос</label>
+    <div style="display:flex;gap:8px;">
+        <textarea id="sqlInput" style="flex:1;background:#fff;border:1px solid #ced4da;border-radius:6px;color:#212529;padding:10px;font-family:monospace;font-size:14px;resize:vertical;" rows="3">{{ sql_query }}</textarea>
+        <button class="btn btn-primary" onclick="loadChart()" style="height:80px;min-width:100px;">Построить</button>
+    </div>
+</div>
+<div id="chartArea" class="chart-container">Введите SQL-запрос и нажмите "Построить"</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+{% if sql_query %}loadChart();{% endif %}
+async function loadChart() {
+    const sql = document.getElementById('sqlInput').value.trim(); if (!sql) return alert('Введите SQL-запрос');
+    const area = document.getElementById('chartArea'); area.innerHTML = '<p style="color:#6c757d;">Загрузка...</p>';
+    try { const r = await fetch('/generate_chart', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sql_query: sql})}); const d = await r.json(); if (d.status==='ok') area.innerHTML = d.chart_body; else area.innerHTML = '<p style="color:#dc3545;">Ошибка: '+d.message+'</p>'; }
+    catch(e) { area.innerHTML = '<p style="color:#dc3545;">Ошибка: '+e+'</p>'; }
+}
+</script>
+{% endblock %}
