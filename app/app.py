@@ -578,6 +578,23 @@ def config_page():
 
 
 # ═══════════════════════════════════════════════════════════════════
+#  COLORS THEME PAGE
+# ═══════════════════════════════════════════════════════════════════
+@app.route("/colors")
+def colors_page():
+    r = login_required()
+    if r: return r
+    themes = [
+        {"id": "default", "name": "По умолчанию"},
+        {"id": "dark", "name": "Тёмная"},
+        {"id": "light", "name": "Светлая"},
+        {"id": "nord", "name": "Nord"},
+        {"id": "solarized", "name": "Solarized"},
+    ]
+    return render_template("colors.html", themes=themes, menu=menu_items(), user=current_user())
+
+
+# ═══════════════════════════════════════════════════════════════════
 #  CONNECTIONS PAGE
 # ═══════════════════════════════════════════════════════════════════
 @app.route("/connections")
