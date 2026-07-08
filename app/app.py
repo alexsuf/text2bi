@@ -20,7 +20,7 @@ from utils import (
     generate_report, log_llm_request, log_message, log_request_response,
     _add_formatted_text, modify_sql_for_business_terms,
     get_dated_filename, load_prompt_template_from_db,
-    get_default_llm_config, get_default_api_key,
+    get_default_llm_config, get_default_api_key, llm_complete_with_config, get_fallback_configs,
 )
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -99,30 +99,25 @@ def menu_items():
 
 def llm_complete(messages, timeout=LLM_TIMEOUT):
     cfg = get_default_llm_config()
+    model_id = cfg.get("model_id")
+    fallback_configs = get_fallback_configs(model_id) if model_id else []
+    total_attempts = 1 + len(fallback_configs)
+    hard_timeout = timeout * total_attempts + 30
 
     result, exc = [], []
 
     def worker():
         try:
-            client = OpenAI(
-                api_key=cfg.get('api_key') or "placeholder",
-                base_url=cfg.get('base_url') or "https://bothub.chat/api/v2/openai/v1"
-            )
-            resp = client.chat.completions.create(
-                model=cfg.get('model_name') or LLM_MODEL,
-                messages=messages,
-                temperature=cfg.get('temperature') or 0,
-                timeout=timeout
-            )
+            resp = llm_complete_with_config(messages, timeout)
             result.append(resp)
         except Exception as e:
             exc.append(e)
 
     t = threading.Thread(target=worker, daemon=True)
     t.start()
-    t.join(timeout + 10)
+    t.join(hard_timeout)
     if t.is_alive():
-        raise TimeoutError(f"LLM timeout {timeout}s")
+        raise TimeoutError(f"LLM timeout {hard_timeout}s")
     if exc:
         raise exc[0]
     return result[0]

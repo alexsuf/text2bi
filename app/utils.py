@@ -21,6 +21,7 @@ from models import (
     ReportPromptCase,
     LLMProvider,
     LLMModel,
+    LLMFallback,
 )
 
 # =========================
@@ -101,24 +102,68 @@ def get_default_llm_config():
     with get_db() as db:
         model = db.query(LLMModel).filter(LLMModel.is_default == True, LLMModel.enabled == True).first()
         if model:
-            provider = db.query(LLMProvider).filter(LLMProvider.id == model.provider_id).first()
-            _llm_config_cache["data"] = {
-                "model_name": model.model_name,
-                "api_key": provider.api_key if provider else None,
-                "base_url": provider.base_url if provider else None,
-                "temperature": float(model.temperature) if model.temperature else None,
-            }
-            _llm_config_cache["timestamp"] = now
-            return _llm_config_cache["data"]
+            provider = db.query(LLMProvider).filter(LLMProvider.id == model.provider_id, LLMProvider.enabled == True).first()
+            if provider:
+                _llm_config_cache["data"] = {
+                    "model_id": str(model.id),
+                    "model_name": model.model_name,
+                    "api_key": provider.api_key,
+                    "base_url": provider.base_url,
+                    "temperature": float(model.temperature) if model.temperature else None,
+                    "timeout": model.timeout or 120,
+                }
+                _llm_config_cache["timestamp"] = now
+                return _llm_config_cache["data"]
     
     _llm_config_cache["data"] = {
+        "model_id": None,
         "model_name": LLM_MODEL,
         "api_key": LLM_TOKEN,
         "base_url": "https://bothub.chat/api/v2/openai/v1",
         "temperature": None,
+        "timeout": 120,
     }
     _llm_config_cache["timestamp"] = now
     return _llm_config_cache["data"]
+
+
+def get_llm_config_for_model(model_id):
+    with get_db() as db:
+        model = db.query(LLMModel).filter(LLMModel.id == model_id, LLMModel.enabled == True).first()
+        if not model:
+            return None
+        provider = db.query(LLMProvider).filter(LLMProvider.id == model.provider_id, LLMProvider.enabled == True).first()
+        if not provider:
+            return None
+        return {
+            "model_id": str(model.id),
+            "model_name": model.model_name,
+            "api_key": provider.api_key,
+            "base_url": provider.base_url,
+            "temperature": float(model.temperature) if model.temperature else None,
+            "timeout": model.timeout or 120,
+        }
+
+
+def get_fallback_configs(model_id):
+    configs = []
+    with get_db() as db:
+        fallbacks = db.query(LLMFallback).filter(LLMFallback.model_id == model_id).order_by(LLMFallback.priority).all()
+        for fb in fallbacks:
+            cfg = get_llm_config_for_model(fb.fallback_model_id)
+            if cfg:
+                configs.append(cfg)
+    return configs
+
+
+def _promote_model_to_default(model_id):
+    global _llm_config_cache
+    with get_db() as db:
+        db.query(LLMModel).filter(LLMModel.is_default == True).update({LLMModel.is_default: False})
+        db.query(LLMModel).filter(LLMModel.id == model_id).update({LLMModel.is_default: True})
+        db.commit()
+    _llm_config_cache["data"] = None
+    log_message("LLM_FALLBACK", f"Модель {model_id} повышена до основной (is_default=True)")
 
 
 def get_openai_client():
@@ -139,19 +184,38 @@ def get_default_api_key():
     return cfg.get("api_key") or LLM_TOKEN
 
 
-def llm_complete_with_config(messages, timeout=120):
-    cfg = get_default_llm_config()
+def _try_single_llm_call(cfg, messages, timeout):
     client = OpenAI(
         api_key=cfg.get("api_key") or "placeholder",
         base_url=cfg.get("base_url") or "https://bothub.chat/api/v2/openai/v1"
     )
-    response = client.chat.completions.create(
+    return client.chat.completions.create(
         model=cfg.get("model_name") or LLM_MODEL,
         messages=messages,
         temperature=cfg.get("temperature") or 0,
-        timeout=timeout
+        timeout=cfg.get("timeout") or timeout
     )
-    return response
+
+
+def llm_complete_with_config(messages, timeout=120):
+    cfg = get_default_llm_config()
+    configs = [cfg]
+    model_id = cfg.get("model_id")
+    if model_id:
+        configs += get_fallback_configs(model_id)
+
+    last_error = None
+    for attempt, cfg_item in enumerate(configs):
+        try:
+            response = _try_single_llm_call(cfg_item, messages, timeout)
+            if attempt > 0 and cfg_item.get("model_id"):
+                _promote_model_to_default(cfg_item["model_id"])
+            return response
+        except Exception as e:
+            last_error = e
+            if attempt < len(configs) - 1:
+                log_message("LLM_FALLBACK", f"{cfg_item.get('model_name')} ошибка: {e}. Пробую fallback...")
+    raise last_error or Exception("Все LLM-модели недоступны")
 
 
 client = None
