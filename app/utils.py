@@ -159,7 +159,7 @@ client = None
 check_raw = _system_config.get("check", "yes").strip().lower()
 check_sql = check_raw in ("yes", "true", "1")
 
-DOWNLOADS_DIR = _system_config.get("download_dir", "app/downloads").strip()
+DOWNLOADS_DIR = os.environ.get("DOWNLOADS_DIR", "app/downloads").strip()
 DOWNLOADS_DIR = os.path.normpath(DOWNLOADS_DIR)
 
 try:
@@ -411,8 +411,10 @@ def build_prompt(question, schema_text, db_desc):
 # =========================
 # ЗАГРУЗКА ПРИМЕРОВ (из БД таблицы app.prompts)
 # =========================
-def load_examples(limit=10):
+def load_examples(limit=None):
     """Load examples from DB prompts table with key 'prompt_generate_sql_examples'."""
+    if limit is None:
+        limit = int(os.environ.get("EXAMPLES", "10"))
     with get_db() as db:
         prompt = db.query(Prompt).filter(
             Prompt.prompt_key == "prompt_generate_sql_examples"

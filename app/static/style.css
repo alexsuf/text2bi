@@ -603,7 +603,9 @@ body {
 [data-theme] .form-control:focus { background: var(--bg-input); color: var(--text-primary); border-color: var(--border-input-focus); }
 [data-theme] .form-label { color: var(--text-secondary); }
 [data-theme] .form-check-label { color: var(--text-primary); }
-[data-theme] .form-check-input { background: var(--bg-input); border-color: var(--border-input); }
+[data-theme] .form-check-input { border-color: var(--border-input); background-color: var(--bg-input); }
+[data-theme] .form-check-input:checked { background-color: var(--text-accent); border-color: var(--text-accent); background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e"); }
+[data-theme] .form-check-input:focus { border-color: var(--border-input-focus); box-shadow: 0 0 0 0.25rem rgba(0,191,255,0.25); }
 [data-theme] .btn-outline-primary { color: var(--text-accent); border-color: var(--text-accent); background: transparent; }
 [data-theme] .btn-outline-primary:hover { background: var(--text-accent); color: var(--text-on-primary); }
 [data-theme] .btn-outline-danger { color: var(--text-error); border-color: var(--text-error); background: transparent; }
