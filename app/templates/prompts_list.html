@@ -3,18 +3,77 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Промпты</h2>
+    <button class="btn btn-primary" style="padding:10px 24px;font-size:14px;" onclick="showForm()">+ Создать промпт</button>
 </div>
+<div id="promptList">
 {% if prompts %}
 {% for p in prompts %}
-<div class="card mb-3">
+<div class="card mb-3" id="prompt_{{ p.id }}">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <strong class="text-primary">{{ p.prompt_key }}</strong>
             <span class="text-muted small">{{ p.name }} | {{ p.category }}</span>
+        </div>
+        <div class="d-flex gap-2" style="margin:8px 0;">
+            <button class="btn btn-sm" style="background:var(--gradient-primary); color:var(--text-on-primary); min-width:120px;" onclick="editPrompt({{ p.id }})">Редактировать</button>
+            <button class="btn btn-sm" style="background:var(--gradient-danger); color:white; min-width:120px;" onclick="deletePrompt({{ p.id }})">Удалить</button>
         </div>
         <pre style="background:var(--bg-pre); color:var(--text-code); max-height:200px; overflow:auto; font-size:13px; border-radius:6px; padding:12px; margin:0;">{{ p.content[:300] }}{% if p.content|length>300 %}...{% endif %}</pre>
     </div>
 </div>
 {% endfor %}
 {% else %}<p class="text-muted text-center py-4">Нет промптов</p>{% endif %}
+</div>
+
+<div id="editForm" class="card mb-3" style="display:none;">
+    <div class="card-body">
+        <h5 id="formTitle">Новый промпт</h5>
+        <input type="hidden" id="editId">
+        <div class="mb-2"><label style="color:var(--text-secondary);font-size:12px;">Название</label><input id="editName" class="form-control" placeholder="Название промпта"></div>
+        <div class="mb-2"><label style="color:var(--text-secondary);font-size:12px;">Ключ</label><input id="editKey" class="form-control" placeholder="prompt_key"></div>
+        <div class="mb-2"><label style="color:var(--text-secondary);font-size:12px;">Категория</label><input id="editCategory" class="form-control" placeholder="general"></div>
+        <div class="mb-2"><label style="color:var(--text-secondary);font-size:12px;">Содержимое</label><textarea id="editContent" class="form-control" rows="6" style="font-family:monospace;font-size:13px;" placeholder="Текст промпта..."></textarea></div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-blue" onclick="savePrompt()">Сохранить</button>
+            <button class="btn" style="background:transparent;color:var(--text-muted);border:1px solid var(--border-light);" onclick="hideForm()">Отмена</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showForm(data) {
+    document.getElementById('editId').value = data ? data.id : '';
+    document.getElementById('editName').value = data ? data.name : '';
+    document.getElementById('editKey').value = data ? data.prompt_key : '';
+    document.getElementById('editCategory').value = data ? data.category : 'general';
+    document.getElementById('editContent').value = data ? data.content : '';
+    document.getElementById('formTitle').textContent = data ? 'Редактировать' : 'Новый промпт';
+    document.getElementById('editForm').style.display = 'block';
+}
+function hideForm() { document.getElementById('editForm').style.display = 'none'; }
+async function editPrompt(id) {
+    const r = await fetch('/api/prompts/' + id); const d = await r.json();
+    showForm(d);
+}
+async function savePrompt() {
+    const id = document.getElementById('editId').value;
+    const body = {
+        name: document.getElementById('editName').value,
+        prompt_key: document.getElementById('editKey').value,
+        category: document.getElementById('editCategory').value,
+        content: document.getElementById('editContent').value
+    };
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? '/api/prompts/' + id : '/api/prompts';
+    await fetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    location.reload();
+}
+async function deletePrompt(id) {
+    if (!confirm('Удалить промпт?')) return;
+    await fetch('/api/prompts/' + id, {method:'DELETE'});
+    location.reload();
+}
+</script>
 {% endblock %}

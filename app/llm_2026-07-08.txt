@@ -1,0 +1,2737 @@
+[2026-07-08 20:56:35] [BUILD_PROMPT]
+EXAMPLES: загружено 273 строк (limit=10)
+============================================================
+[2026-07-08 20:56:35] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Дата и время запроса (2026-07-08 20:56:35):
+[system]
+Ты генерируешь SQL
+
+[user]
+Ты — эксперт по SQL PostgreSQL.
+
+=== СХЕМА ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ ===
+
+
+=== ПРИМЕРЫ ===
+Запрос: Доходы по регионам?
+SQL: SELECT region, SUM(revenue) FROM mart_finance GROUP BY region;
+
+Запрос: Сколько активных заявок?
+SQL: SELECT status, COUNT(*) FROM service_requests WHERE status IN ('Открыта','В работе') GROUP BY status;
+
+Запрос: выполнения SLA?
+SQL: SELECT ROUND(AVG(CASE WHEN duration_hours <= 24 THEN 1 ELSE 0 END)*100,2) AS sla_percent FROM service_requests WHERE request_type = 'Инцидент' AND status = 'Закрыта';
+
+
+Запрос: худшие регионы по SLA?
+SQL: SELECT r.name, AVG(CASE WHEN sr.duration_hours <= 24 THEN 1 ELSE 0 END) AS sla_rate FROM service_requests sr JOIN service_objects so ON sr.object_id = so.id JOIN clients c ON so.client_id = c.id JOIN regions r ON c.region_id = r.id WHERE sr.status = 'Закрыта' GROUP BY r.name ORDER BY sla_rate ASC;
+
+Запрос: Топ инженеров
+SQL: SELECT e.full_name, COUNT(*) AS closed_requests FROM engineers e JOIN service_requests sr ON e.id = sr.engineer_id WHERE sr.status = 'Закрыта' GROUP BY e.full_name ORDER BY closed_requests DESC LIMIT 10;
+
+Запрос: кто работает дольше всех
+SQL: SELECT
+    e.full_name,
+    AVG(sr.duration_hours) AS avg_time
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+баланс по регионам
+
+SQL:
+
+=============================================
+[2026-07-08 20:56:39] [BUILD_PROMPT]
+EXAMPLES: загружено 273 строк (limit=10)
+============================================================
+[2026-07-08 20:56:39] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Дата и время запроса (2026-07-08 20:56:39):
+[system]
+Ты генерируешь SQL
+
+[user]
+Ты — эксперт по SQL PostgreSQL.
+
+=== СХЕМА ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ ===
+
+
+=== ПРИМЕРЫ ===
+Запрос: Доходы по регионам?
+SQL: SELECT region, SUM(revenue) FROM mart_finance GROUP BY region;
+
+Запрос: Сколько активных заявок?
+SQL: SELECT status, COUNT(*) FROM service_requests WHERE status IN ('Открыта','В работе') GROUP BY status;
+
+Запрос: выполнения SLA?
+SQL: SELECT ROUND(AVG(CASE WHEN duration_hours <= 24 THEN 1 ELSE 0 END)*100,2) AS sla_percent FROM service_requests WHERE request_type = 'Инцидент' AND status = 'Закрыта';
+
+
+Запрос: худшие регионы по SLA?
+SQL: SELECT r.name, AVG(CASE WHEN sr.duration_hours <= 24 THEN 1 ELSE 0 END) AS sla_rate FROM service_requests sr JOIN service_objects so ON sr.object_id = so.id JOIN clients c ON so.client_id = c.id JOIN regions r ON c.region_id = r.id WHERE sr.status = 'Закрыта' GROUP BY r.name ORDER BY sla_rate ASC;
+
+Запрос: Топ инженеров
+SQL: SELECT e.full_name, COUNT(*) AS closed_requests FROM engineers e JOIN service_requests sr ON e.id = sr.engineer_id WHERE sr.status = 'Закрыта' GROUP BY e.full_name ORDER BY closed_requests DESC LIMIT 10;
+
+Запрос: кто работает дольше всех
+SQL: SELECT
+    e.full_name,
+    AVG(sr.duration_hours) AS avg_time
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+баланс по регионам
+
+SQL:
+
+=============================================
+[2026-07-08 20:57:51] [BUILD_PROMPT]
+EXAMPLES: загружено 273 строк (limit=10)
+============================================================
+[2026-07-08 20:57:51] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Дата и время запроса (2026-07-08 20:57:51):
+[system]
+Ты генерируешь SQL
+
+[user]
+Ты — эксперт по SQL PostgreSQL.
+
+=== СХЕМА ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ ===
+
+
+=== ПРИМЕРЫ ===
+Запрос: Доходы по регионам?
+SQL: SELECT region, SUM(revenue) FROM mart_finance GROUP BY region;
+
+Запрос: Сколько активных заявок?
+SQL: SELECT status, COUNT(*) FROM service_requests WHERE status IN ('Открыта','В работе') GROUP BY status;
+
+Запрос: выполнения SLA?
+SQL: SELECT ROUND(AVG(CASE WHEN duration_hours <= 24 THEN 1 ELSE 0 END)*100,2) AS sla_percent FROM service_requests WHERE request_type = 'Инцидент' AND status = 'Закрыта';
+
+
+Запрос: худшие регионы по SLA?
+SQL: SELECT r.name, AVG(CASE WHEN sr.duration_hours <= 24 THEN 1 ELSE 0 END) AS sla_rate FROM service_requests sr JOIN service_objects so ON sr.object_id = so.id JOIN clients c ON so.client_id = c.id JOIN regions r ON c.region_id = r.id WHERE sr.status = 'Закрыта' GROUP BY r.name ORDER BY sla_rate ASC;
+
+Запрос: Топ инженеров
+SQL: SELECT e.full_name, COUNT(*) AS closed_requests FROM engineers e JOIN service_requests sr ON e.id = sr.engineer_id WHERE sr.status = 'Закрыта' GROUP BY e.full_name ORDER BY closed_requests DESC LIMIT 10;
+
+Запрос: кто работает дольше всех
+SQL: SELECT
+    e.full_name,
+    AVG(sr.duration_hours) AS avg_time
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+какие инженеры больше всего работали с кассами в прошлом месяце, дай имя региона, количество заявок на каждого инженера, все атрибуты инженеров и номер телефона каждого инженера
+
+SQL:
+
+=============================================
+[2026-07-08 20:58:06] [BUILD_MSGS]
+template_source: [system_role]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ БАЗЫ ===
+{DB_DESC}
+
+=== SQL-ЗАПРОС ===
+{SQL_QUERY}
+
+=== ДАННЫЕ ===
+{SQL_DATA}
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user_role]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание. 
+
+[task]
+{QUESTION}
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'SQL_QUERY', 'SQL_DATA', 'QUESTION']
+============================================================
+Дата и время запроса (2026-07-08 20:58:06):
+[system]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ БАЗЫ ===
+
+
+=== SQL-ЗАПРОС ===
+
+
+=== ДАННЫЕ ===
+
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание.
+
+какие инженеры больше всего работали с кассами в прошлом месяце, дай имя региона, количество заявок на каждого инженера, все атрибуты инженеров и номер телефона каждого инженера
+
+=============================================
+[2026-07-08 20:58:33] [BUILD_MSGS]
+template_source: [system_role]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ БАЗЫ ===
+{DB_DESC}
+
+=== SQL-ЗАПРОС ===
+{SQL_QUERY}
+
+=== ДАННЫЕ ===
+{SQL_DATA}
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user_role]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание. 
+
+[task]
+{QUESTION}
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'SQL_QUERY', 'SQL_DATA', 'QUESTION']
+============================================================
+Дата и время запроса (2026-07-08 20:58:33):
+[system]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ БАЗЫ ===
+
+
+=== SQL-ЗАПРОС ===
+
+
+=== ДАННЫЕ ===
+
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user]
+какие инженеры больше всего работали с кассами в прошлом месяце, дай имя региона, количество заявок на каждого инженера, все атрибуты инженеров и номер телефона каждого инженера
+
+[assistant]
+Для ответа на вопрос "какие инженеры больше всего работали с кассами в прошлом месяце" нужно:
+
+- Определить "прошлый месяц" относительно текущей даты.
+- Отфильтровать заявки по типу объекта "касса" (если "касса" — это тип объекта или связанный request_type, уточним).
+- Получить количество заявок по каждому инженеру.
+- Вернуть имя региона инженера, все атрибуты инженеров и его телефон.
+
+Проверим таблицы для получения нужных данных:
+
+- Тип объекта "касса" скорее всего представлен в таблице **service_objects** в колонке **type**.
+- В таблице **service_requests** есть заявки с полем **engineer_id**, полем **created_at** (дата создания заявки), **request_type** и временем работы.
+- Таблица **engineers** содержит данные инженеров, включая регион.
+- Таблица **engineer_contacts** содержит телефоны инженеров.
+- Таблица **regions** с названием региона.
+
+---
+
+### SQL-запрос
+
+```sql
+WITH last_month AS (
+    SELECT date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+           date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    CROSS JOIN last_month lm
+    WHERE so.type = 'касса'
+      AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+),
+engineer_request_counts AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM engineer_request_counts
+)
+
+SELECT 
+    e.*, 
+    r.name AS region_name, 
+    erc.request_count,
+    ec.phone
+FROM engineer_request_counts erc
+JOIN max_requests mr ON erc.request_count = mr.max_count
+JOIN engineers e ON e.id = erc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY erc.request_count DESC;
+```
+
+---
+
+### Объяснение
+
+- Определяем временной отрезок "прошлый месяц".
+- Фильтруем заявки по объектам с типом "касса" в `service_objects`.
+- Считаем количество заявок по каждому инженеру.
+- Отбираем инженеров с максимальным количеством заявок.
+- Возвращаем все атрибуты инженера, имя региона и телефон.
+
+---
+
+Если нужно не только "самых работающих", а всех инженеров, работавших с кассами в прошлом месяце, с их количеством заявок, то можно убрать ограничение по максимальному количеству:
+
+```sql
+...
+SELECT 
+    e.*, 
+    r.name AS region_name, 
+    erc.request_count,
+    ec.phone
+FROM engineer_request_counts erc
+JOIN engineers e ON e.id = erc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY erc.request_count DESC;
+```
+
+---
+
+Если нужна дополнительная помощь - уточните!
+
+[user]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание.
+
+какие инженеры больше всего работали с кассами в прошлом месяце
+
+=============================================
+[2026-07-08 20:59:45] [BUILD_MSGS]
+template_source: [system_role]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ БАЗЫ ===
+{DB_DESC}
+
+=== SQL-ЗАПРОС ===
+{SQL_QUERY}
+
+=== ДАННЫЕ ===
+{SQL_DATA}
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user_role]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание. 
+
+[task]
+{QUESTION}
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'SQL_QUERY', 'SQL_DATA', 'QUESTION']
+============================================================
+Дата и время запроса (2026-07-08 20:59:45):
+[system]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ БАЗЫ ===
+
+
+=== SQL-ЗАПРОС ===
+
+
+=== ДАННЫЕ ===
+
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user]
+какие инженеры больше всего работали с кассами в прошлом месяце, дай имя региона, количество заявок на каждого инженера, все атрибуты инженеров и номер телефона каждого инженера
+
+[assistant]
+Для ответа на вопрос "какие инженеры больше всего работали с кассами в прошлом месяце" нужно:
+
+- Определить "прошлый месяц" относительно текущей даты.
+- Отфильтровать заявки по типу объекта "касса" (если "касса" — это тип объекта или связанный request_type, уточним).
+- Получить количество заявок по каждому инженеру.
+- Вернуть имя региона инженера, все атрибуты инженеров и его телефон.
+
+Проверим таблицы для получения нужных данных:
+
+- Тип объекта "касса" скорее всего представлен в таблице **service_objects** в колонке **type**.
+- В таблице **service_requests** есть заявки с полем **engineer_id**, полем **created_at** (дата создания заявки), **request_type** и временем работы.
+- Таблица **engineers** содержит данные инженеров, включая регион.
+- Таблица **engineer_contacts** содержит телефоны инженеров.
+- Таблица **regions** с названием региона.
+
+---
+
+### SQL-запрос
+
+```sql
+WITH last_month AS (
+    SELECT date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+           date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    CROSS JOIN last_month lm
+    WHERE so.type = 'касса'
+      AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+),
+engineer_request_counts AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM engineer_request_counts
+)
+
+SELECT 
+    e.*, 
+    r.name AS region_name, 
+    erc.request_count,
+    ec.phone
+FROM engineer_request_counts erc
+JOIN max_requests mr ON erc.request_count = mr.max_count
+JOIN engineers e ON e.id = erc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY erc.request_count DESC;
+```
+
+---
+
+### Объяснение
+
+- Определяем временной отрезок "прошлый месяц".
+- Фильтруем заявки по объектам с типом "касса" в `service_objects`.
+- Считаем количество заявок по каждому инженеру.
+- Отбираем инженеров с максимальным количеством заявок.
+- Возвращаем все атрибуты инженера, имя региона и телефон.
+
+---
+
+Если нужно не только "самых работающих", а всех инженеров, работавших с кассами в прошлом месяце, с их количеством заявок, то можно убрать ограничение по максимальному количеству:
+
+```sql
+...
+SELECT 
+    e.*, 
+    r.name AS region_name, 
+    erc.request_count,
+    ec.phone
+FROM engineer_request_counts erc
+JOIN engineers e ON e.id = erc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY erc.request_count DESC;
+```
+
+---
+
+Если нужна дополнительная помощь - уточните!
+
+[user]
+какие инженеры больше всего работали с кассами в прошлом месяце
+
+[assistant]
+### Анализ задачи
+
+Нужно найти инженеров, которые в **прошлом месяце** работали **с кассами** и определить, кто из них выполнил наибольшее количество заявок.
+
+**Ключевые моменты:**
+
+- Кассами скорее всего считаются сервисные объекты с типом `'касса'` в таблице `service_objects`.
+- Заявки по таким объектам хранятся в `service_requests`, где есть поле `object_id` (связь с объектом), `engineer_id` — инженер, и дата создания заявки в поле `created_at`.
+- Из таблицы `engineers` можно получить атрибуты инженера, а из `engineer_contacts` — телефон.
+- Регион инженера из таблицы `regions` через `engineers.region_id`.
+
+---
+
+### SQL-запрос для поиска инженеров, которые больше всего работали с кассами в прошлом месяце:
+
+```sql
+WITH last_month AS (
+    SELECT 
+        date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+        date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    CROSS JOIN last_month lm
+    WHERE so.type = 'касса'
+      AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+),
+requests_per_engineer AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM requests_per_engineer
+)
+SELECT 
+    e.*,
+    r.name AS region_name,
+    rpc.request_count,
+    ec.phone
+FROM requests_per_engineer rpc
+JOIN max_requests mr ON rpc.request_count = mr.max_count
+JOIN engineers e ON e.id = rpc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY rpc.request_count DESC;
+```
+
+---
+
+### Что делает запрос:
+
+- Определяет границы прошлого месяца.
+- Берёт все заявки по объектам типа `"касса"` за прошлый месяц.
+- Подсчитывает, сколько заявок выполнил каждый инженер.
+- Находит максимальное количество заявок.
+- Возвращает данные инженеров, которые сделали *максимум* заявок: их полные данные, регион и телефон.
+
+---
+
+Если нужно вывести всю группу инженеров с их количеством заявок (например, топ-5 или всех, кто работал с кассами), можно убрать ограничение по максимальному значению и добавить `ORDER BY` с лимитом.
+
+---
+
+Если есть вопросы — обращайтесь!
+
+[user]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание.
+
+Почему запрос к базе выдает ошибку: 
+WITH last_month AS (
+    SELECT 
+        date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+        date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    CROSS JOIN last_month lm
+    WHERE so.type = 'касса'
+      AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+),
+requests_per_engineer AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM requests_per_engineer
+)
+SELECT 
+    e.*,
+    r.name AS region_name,
+    rpc.request_count,
+    ec.phone
+FROM requests_per_engineer rpc
+JOIN max_requests mr ON rpc.request_count = mr.max_count
+JOIN engineers e ON e.id = rpc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY rpc.request_count DESC;
+
+=============================================
+[2026-07-08 21:00:37] [BUILD_MSGS]
+template_source: [system_role]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ БАЗЫ ===
+{DB_DESC}
+
+=== SQL-ЗАПРОС ===
+{SQL_QUERY}
+
+=== ДАННЫЕ ===
+{SQL_DATA}
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user_role]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание. 
+
+[task]
+{QUESTION}
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'SQL_QUERY', 'SQL_DATA', 'QUESTION']
+============================================================
+Дата и время запроса (2026-07-08 21:00:37):
+[system]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ БАЗЫ ===
+
+
+=== SQL-ЗАПРОС ===
+
+
+=== ДАННЫЕ ===
+
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user]
+какие инженеры больше всего работали с кассами в прошлом месяце, дай имя региона, количество заявок на каждого инженера, все атрибуты инженеров и номер телефона каждого инженера
+
+[assistant]
+Для ответа на вопрос "какие инженеры больше всего работали с кассами в прошлом месяце" нужно:
+
+- Определить "прошлый месяц" относительно текущей даты.
+- Отфильтровать заявки по типу объекта "касса" (если "касса" — это тип объекта или связанный request_type, уточним).
+- Получить количество заявок по каждому инженеру.
+- Вернуть имя региона инженера, все атрибуты инженеров и его телефон.
+
+Проверим таблицы для получения нужных данных:
+
+- Тип объекта "касса" скорее всего представлен в таблице **service_objects** в колонке **type**.
+- В таблице **service_requests** есть заявки с полем **engineer_id**, полем **created_at** (дата создания заявки), **request_type** и временем работы.
+- Таблица **engineers** содержит данные инженеров, включая регион.
+- Таблица **engineer_contacts** содержит телефоны инженеров.
+- Таблица **regions** с названием региона.
+
+---
+
+### SQL-запрос
+
+```sql
+WITH last_month AS (
+    SELECT date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+           date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    CROSS JOIN last_month lm
+    WHERE so.type = 'касса'
+      AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+),
+engineer_request_counts AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM engineer_request_counts
+)
+
+SELECT 
+    e.*, 
+    r.name AS region_name, 
+    erc.request_count,
+    ec.phone
+FROM engineer_request_counts erc
+JOIN max_requests mr ON erc.request_count = mr.max_count
+JOIN engineers e ON e.id = erc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY erc.request_count DESC;
+```
+
+---
+
+### Объяснение
+
+- Определяем временной отрезок "прошлый месяц".
+- Фильтруем заявки по объектам с типом "касса" в `service_objects`.
+- Считаем количество заявок по каждому инженеру.
+- Отбираем инженеров с максимальным количеством заявок.
+- Возвращаем все атрибуты инженера, имя региона и телефон.
+
+---
+
+Если нужно не только "самых работающих", а всех инженеров, работавших с кассами в прошлом месяце, с их количеством заявок, то можно убрать ограничение по максимальному количеству:
+
+```sql
+...
+SELECT 
+    e.*, 
+    r.name AS region_name, 
+    erc.request_count,
+    ec.phone
+FROM engineer_request_counts erc
+JOIN engineers e ON e.id = erc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY erc.request_count DESC;
+```
+
+---
+
+Если нужна дополнительная помощь - уточните!
+
+[user]
+какие инженеры больше всего работали с кассами в прошлом месяце
+
+[assistant]
+### Анализ задачи
+
+Нужно найти инженеров, которые в **прошлом месяце** работали **с кассами** и определить, кто из них выполнил наибольшее количество заявок.
+
+**Ключевые моменты:**
+
+- Кассами скорее всего считаются сервисные объекты с типом `'касса'` в таблице `service_objects`.
+- Заявки по таким объектам хранятся в `service_requests`, где есть поле `object_id` (связь с объектом), `engineer_id` — инженер, и дата создания заявки в поле `created_at`.
+- Из таблицы `engineers` можно получить атрибуты инженера, а из `engineer_contacts` — телефон.
+- Регион инженера из таблицы `regions` через `engineers.region_id`.
+
+---
+
+### SQL-запрос для поиска инженеров, которые больше всего работали с кассами в прошлом месяце:
+
+```sql
+WITH last_month AS (
+    SELECT 
+        date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+        date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    CROSS JOIN last_month lm
+    WHERE so.type = 'касса'
+      AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+),
+requests_per_engineer AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM requests_per_engineer
+)
+SELECT 
+    e.*,
+    r.name AS region_name,
+    rpc.request_count,
+    ec.phone
+FROM requests_per_engineer rpc
+JOIN max_requests mr ON rpc.request_count = mr.max_count
+JOIN engineers e ON e.id = rpc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY rpc.request_count DESC;
+```
+
+---
+
+### Что делает запрос:
+
+- Определяет границы прошлого месяца.
+- Берёт все заявки по объектам типа `"касса"` за прошлый месяц.
+- Подсчитывает, сколько заявок выполнил каждый инженер.
+- Находит максимальное количество заявок.
+- Возвращает данные инженеров, которые сделали *максимум* заявок: их полные данные, регион и телефон.
+
+---
+
+Если нужно вывести всю группу инженеров с их количеством заявок (например, топ-5 или всех, кто работал с кассами), можно убрать ограничение по максимальному значению и добавить `ORDER BY` с лимитом.
+
+---
+
+Если есть вопросы — обращайтесь!
+
+[user]
+Почему запрос к базе выдает ошибку: 
+WITH last_month AS (
+    SELECT 
+        date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+        date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    CROSS JOIN last_month lm
+    WHERE so.type = 'касса'
+      AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+),
+requests_per_engineer AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM requests_per_engineer
+)
+SELECT 
+    e.*,
+    r.name AS region_name,
+    rpc.request_count,
+    ec.phone
+FROM requests_per_engineer rpc
+JOIN max_requests mr ON rpc.request_count = mr.max_count
+JOIN engineers e ON e.id = rpc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY rpc.request_count DESC;
+
+[assistant]
+Ошибка в представленном запросе возникает из-за того, что в CTE `cassa_requests` выбирается только поле `engineer_id` из `service_requests`, а затем в следующем CTE `requests_per_engineer` происходит группировка по `engineer_id`. 
+
+Сама по себе эта логика правильна, но можно предположить несколько причин ошибки, опираясь на схему и запрос:
+
+---
+
+### Возможные причины ошибки
+
+1. **Проблема с типом данных `created_at` и границами дат из CTE `last_month`**
+
+- В схеме поле `created_at` в таблице `service_requests` имеет тип `timestamp without time zone`.
+- В CTE `last_month` для `end_date` используется `date_trunc('month', CURRENT_DATE) - interval '1 second'`, что дает дату и время примерно на 23:59:59 последнего дня предыдущего месяца.
+- Однако лучше проверить, что `sr.created_at BETWEEN lm.start_date AND lm.end_date` — корректное сравнение для `timestamp` и без таймзоны. Обычно с `timestamp without time zone` проблем не возникает, но стоит удостовериться, что `start_date` и `end_date` тоже имеют тип timestamp, а не date.
+
+2. **В CTE `cassa_requests` нет поля `engineer_id`**
+
+- В таблице `service_requests` есть поле `engineer_id` — это факт.
+- Если по какой-то причине поле `engineer_id` может быть `NULL` в каких-то строках, запрос может работать, но в группировке — потенциально может возникать проблема. Но это не чаще всего вызывает ошибку.
+
+3. **Ошибка с повторяющимся именем алиаса**
+
+- В финальном SELECT вы ссылаетесь на таблицу `requests_per_engineer` с алиасом `rpc`, а в одном месте — возможно опечатка:
+  
+  ```sql
+  JOIN engineers e ON e.id = rpc.engineer_id
+  ```
+  
+- В вашем запросе такое есть, значит ошибок с именами нет.
+
+4. **Ошибка с использованием `CROSS JOIN last_month lm` в подзапросе**
+
+- Часто для подключения параметров из другого CTE достаточно использовать `JOIN` или просто подставить CTE переменные.
+- `CROSS JOIN` технически не запрещен, но если база не поддерживает вложенные CTE, может иногда вызывать проблемы.
+
+5. **Ошибки синтаксиса или опечатки**
+
+- Проверьте, что все имена таблиц и полей указаны корректно (например, `'касса'` — точное значение в поле `so.type`).
+- В схеме не видно ограничений, но стоит проверить, нет ли опечаток в именах.
+
+---
+
+### Частая реальная причина ошибки: неверное указание границ даты в условии
+
+В вашем запросе:
+
+```sql
+AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+```
+
+- При текущем определении:
+
+```sql
+date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+```
+
+Если сегодня, например, 15 июня 2024, тогда:
+
+- `start_date` = 1 мая 2024 00:00:00
+- `end_date` = 31 мая 2024 23:59:59 (т.к. 1 июня 2024 00:00:00 - 1 секунда)
+
+Это правильно, однако лучше использовать `date_trunc('month', CURRENT_DATE) - interval '1 second'` — оно корректно, но менее читаемо. Иногда лучше сделать:
+
+```sql
+date_trunc('month', CURRENT_DATE - interval '1 month') AS start_date,
+date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+```
+
+чтобы явно получить первый и последний день прошлого месяца.
+
+---
+
+### Рекомендация: переписать CTE `last_month` так:
+
+```sql
+WITH last_month AS (
+    SELECT
+        date_trunc('month', CURRENT_DATE - interval '1 month') AS start_date,
+        (date_trunc('month', CURRENT_DATE) - interval '1 second') AS end_date
+)
+```
+
+Это понятнее и исключает неоднозначности.
+
+---
+
+### Резюме
+
+Если вы получили ошибку:
+
+- Проверьте, что `last_month` CTE правильно отдает timestamp без таймзоны, и `sr.created_at` сравнивается с ними.
+- Убедитесь, что в таблице `service_requests` действительно есть поле `engineer_id` и таблицы называются правильно.
+- Попробуйте заменить `CROSS JOIN last_month lm` на простое включение переменных из CTE в WHERE через подзапрос или `JOIN`.
+- Перепишите `last_month` CTE, чтобы было вот так:
+
+```sql
+WITH last_month AS (
+    SELECT
+      date_trunc('month', CURRENT_DATE - interval '1 month') AS start_date,
+      date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+)
+```
+
+---
+
+Если возможно, укажите текст ошибки — это поможет дать точный ответ.
+
+[user]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание.
+
+дай исправленный SQL
+
+=============================================
+[2026-07-08 21:01:01] [BUILD_MSGS]
+template_source: [system_role]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ БАЗЫ ===
+{DB_DESC}
+
+=== SQL-ЗАПРОС ===
+{SQL_QUERY}
+
+=== ДАННЫЕ ===
+{SQL_DATA}
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user_role]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание. 
+
+[task]
+{QUESTION}
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'SQL_QUERY', 'SQL_DATA', 'QUESTION']
+============================================================
+Дата и время запроса (2026-07-08 21:01:01):
+[system]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ БАЗЫ ===
+
+
+=== SQL-ЗАПРОС ===
+
+
+=== ДАННЫЕ ===
+
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user]
+какие инженеры больше всего работали с кассами в прошлом месяце, дай имя региона, количество заявок на каждого инженера, все атрибуты инженеров и номер телефона каждого инженера
+
+[assistant]
+Для ответа на вопрос "какие инженеры больше всего работали с кассами в прошлом месяце" нужно:
+
+- Определить "прошлый месяц" относительно текущей даты.
+- Отфильтровать заявки по типу объекта "касса" (если "касса" — это тип объекта или связанный request_type, уточним).
+- Получить количество заявок по каждому инженеру.
+- Вернуть имя региона инженера, все атрибуты инженеров и его телефон.
+
+Проверим таблицы для получения нужных данных:
+
+- Тип объекта "касса" скорее всего представлен в таблице **service_objects** в колонке **type**.
+- В таблице **service_requests** есть заявки с полем **engineer_id**, полем **created_at** (дата создания заявки), **request_type** и временем работы.
+- Таблица **engineers** содержит данные инженеров, включая регион.
+- Таблица **engineer_contacts** содержит телефоны инженеров.
+- Таблица **regions** с названием региона.
+
+---
+
+### SQL-запрос
+
+```sql
+WITH last_month AS (
+    SELECT date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+           date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    CROSS JOIN last_month lm
+    WHERE so.type = 'касса'
+      AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+),
+engineer_request_counts AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM engineer_request_counts
+)
+
+SELECT 
+    e.*, 
+    r.name AS region_name, 
+    erc.request_count,
+    ec.phone
+FROM engineer_request_counts erc
+JOIN max_requests mr ON erc.request_count = mr.max_count
+JOIN engineers e ON e.id = erc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY erc.request_count DESC;
+```
+
+---
+
+### Объяснение
+
+- Определяем временной отрезок "прошлый месяц".
+- Фильтруем заявки по объектам с типом "касса" в `service_objects`.
+- Считаем количество заявок по каждому инженеру.
+- Отбираем инженеров с максимальным количеством заявок.
+- Возвращаем все атрибуты инженера, имя региона и телефон.
+
+---
+
+Если нужно не только "самых работающих", а всех инженеров, работавших с кассами в прошлом месяце, с их количеством заявок, то можно убрать ограничение по максимальному количеству:
+
+```sql
+...
+SELECT 
+    e.*, 
+    r.name AS region_name, 
+    erc.request_count,
+    ec.phone
+FROM engineer_request_counts erc
+JOIN engineers e ON e.id = erc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY erc.request_count DESC;
+```
+
+---
+
+Если нужна дополнительная помощь - уточните!
+
+[user]
+какие инженеры больше всего работали с кассами в прошлом месяце
+
+[assistant]
+### Анализ задачи
+
+Нужно найти инженеров, которые в **прошлом месяце** работали **с кассами** и определить, кто из них выполнил наибольшее количество заявок.
+
+**Ключевые моменты:**
+
+- Кассами скорее всего считаются сервисные объекты с типом `'касса'` в таблице `service_objects`.
+- Заявки по таким объектам хранятся в `service_requests`, где есть поле `object_id` (связь с объектом), `engineer_id` — инженер, и дата создания заявки в поле `created_at`.
+- Из таблицы `engineers` можно получить атрибуты инженера, а из `engineer_contacts` — телефон.
+- Регион инженера из таблицы `regions` через `engineers.region_id`.
+
+---
+
+### SQL-запрос для поиска инженеров, которые больше всего работали с кассами в прошлом месяце:
+
+```sql
+WITH last_month AS (
+    SELECT 
+        date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+        date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    CROSS JOIN last_month lm
+    WHERE so.type = 'касса'
+      AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+),
+requests_per_engineer AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM requests_per_engineer
+)
+SELECT 
+    e.*,
+    r.name AS region_name,
+    rpc.request_count,
+    ec.phone
+FROM requests_per_engineer rpc
+JOIN max_requests mr ON rpc.request_count = mr.max_count
+JOIN engineers e ON e.id = rpc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY rpc.request_count DESC;
+```
+
+---
+
+### Что делает запрос:
+
+- Определяет границы прошлого месяца.
+- Берёт все заявки по объектам типа `"касса"` за прошлый месяц.
+- Подсчитывает, сколько заявок выполнил каждый инженер.
+- Находит максимальное количество заявок.
+- Возвращает данные инженеров, которые сделали *максимум* заявок: их полные данные, регион и телефон.
+
+---
+
+Если нужно вывести всю группу инженеров с их количеством заявок (например, топ-5 или всех, кто работал с кассами), можно убрать ограничение по максимальному значению и добавить `ORDER BY` с лимитом.
+
+---
+
+Если есть вопросы — обращайтесь!
+
+[user]
+Почему запрос к базе выдает ошибку: 
+WITH last_month AS (
+    SELECT 
+        date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+        date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    CROSS JOIN last_month lm
+    WHERE so.type = 'касса'
+      AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+),
+requests_per_engineer AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM requests_per_engineer
+)
+SELECT 
+    e.*,
+    r.name AS region_name,
+    rpc.request_count,
+    ec.phone
+FROM requests_per_engineer rpc
+JOIN max_requests mr ON rpc.request_count = mr.max_count
+JOIN engineers e ON e.id = rpc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY rpc.request_count DESC;
+
+[assistant]
+Ошибка в представленном запросе возникает из-за того, что в CTE `cassa_requests` выбирается только поле `engineer_id` из `service_requests`, а затем в следующем CTE `requests_per_engineer` происходит группировка по `engineer_id`. 
+
+Сама по себе эта логика правильна, но можно предположить несколько причин ошибки, опираясь на схему и запрос:
+
+---
+
+### Возможные причины ошибки
+
+1. **Проблема с типом данных `created_at` и границами дат из CTE `last_month`**
+
+- В схеме поле `created_at` в таблице `service_requests` имеет тип `timestamp without time zone`.
+- В CTE `last_month` для `end_date` используется `date_trunc('month', CURRENT_DATE) - interval '1 second'`, что дает дату и время примерно на 23:59:59 последнего дня предыдущего месяца.
+- Однако лучше проверить, что `sr.created_at BETWEEN lm.start_date AND lm.end_date` — корректное сравнение для `timestamp` и без таймзоны. Обычно с `timestamp without time zone` проблем не возникает, но стоит удостовериться, что `start_date` и `end_date` тоже имеют тип timestamp, а не date.
+
+2. **В CTE `cassa_requests` нет поля `engineer_id`**
+
+- В таблице `service_requests` есть поле `engineer_id` — это факт.
+- Если по какой-то причине поле `engineer_id` может быть `NULL` в каких-то строках, запрос может работать, но в группировке — потенциально может возникать проблема. Но это не чаще всего вызывает ошибку.
+
+3. **Ошибка с повторяющимся именем алиаса**
+
+- В финальном SELECT вы ссылаетесь на таблицу `requests_per_engineer` с алиасом `rpc`, а в одном месте — возможно опечатка:
+  
+  ```sql
+  JOIN engineers e ON e.id = rpc.engineer_id
+  ```
+  
+- В вашем запросе такое есть, значит ошибок с именами нет.
+
+4. **Ошибка с использованием `CROSS JOIN last_month lm` в подзапросе**
+
+- Часто для подключения параметров из другого CTE достаточно использовать `JOIN` или просто подставить CTE переменные.
+- `CROSS JOIN` технически не запрещен, но если база не поддерживает вложенные CTE, может иногда вызывать проблемы.
+
+5. **Ошибки синтаксиса или опечатки**
+
+- Проверьте, что все имена таблиц и полей указаны корректно (например, `'касса'` — точное значение в поле `so.type`).
+- В схеме не видно ограничений, но стоит проверить, нет ли опечаток в именах.
+
+---
+
+### Частая реальная причина ошибки: неверное указание границ даты в условии
+
+В вашем запросе:
+
+```sql
+AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+```
+
+- При текущем определении:
+
+```sql
+date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+```
+
+Если сегодня, например, 15 июня 2024, тогда:
+
+- `start_date` = 1 мая 2024 00:00:00
+- `end_date` = 31 мая 2024 23:59:59 (т.к. 1 июня 2024 00:00:00 - 1 секунда)
+
+Это правильно, однако лучше использовать `date_trunc('month', CURRENT_DATE) - interval '1 second'` — оно корректно, но менее читаемо. Иногда лучше сделать:
+
+```sql
+date_trunc('month', CURRENT_DATE - interval '1 month') AS start_date,
+date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+```
+
+чтобы явно получить первый и последний день прошлого месяца.
+
+---
+
+### Рекомендация: переписать CTE `last_month` так:
+
+```sql
+WITH last_month AS (
+    SELECT
+        date_trunc('month', CURRENT_DATE - interval '1 month') AS start_date,
+        (date_trunc('month', CURRENT_DATE) - interval '1 second') AS end_date
+)
+```
+
+Это понятнее и исключает неоднозначности.
+
+---
+
+### Резюме
+
+Если вы получили ошибку:
+
+- Проверьте, что `last_month` CTE правильно отдает timestamp без таймзоны, и `sr.created_at` сравнивается с ними.
+- Убедитесь, что в таблице `service_requests` действительно есть поле `engineer_id` и таблицы называются правильно.
+- Попробуйте заменить `CROSS JOIN last_month lm` на простое включение переменных из CTE в WHERE через подзапрос или `JOIN`.
+- Перепишите `last_month` CTE, чтобы было вот так:
+
+```sql
+WITH last_month AS (
+    SELECT
+      date_trunc('month', CURRENT_DATE - interval '1 month') AS start_date,
+      date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+)
+```
+
+---
+
+Если возможно, укажите текст ошибки — это поможет дать точный ответ.
+
+[user]
+дай исправленный SQL
+
+[assistant]
+Исправленный SQL-запрос с учётом корректного определения границ прошлого месяца и правильного подключения CTE `last_month`:
+
+```sql
+WITH last_month AS (
+    SELECT
+        date_trunc('month', CURRENT_DATE - interval '1 month') AS start_date,
+        (date_trunc('month', CURRENT_DATE) - interval '1 second') AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    JOIN last_month lm ON sr.created_at BETWEEN lm.start_date AND lm.end_date
+    WHERE so.type = 'касса'
+),
+requests_per_engineer AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM requests_per_engineer
+)
+SELECT 
+    e.*,
+    r.name AS region_name,
+    rpc.request_count,
+    ec.phone
+FROM requests_per_engineer rpc
+JOIN max_requests mr ON rpc.request_count = mr.max_count
+JOIN engineers e ON e.id = rpc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY rpc.request_count DESC;
+```
+
+---
+
+### Основные изменения:
+
+- В CTE `last_month` определение границ прошлого месяца:
+
+  ```sql
+  date_trunc('month', CURRENT_DATE - interval '1 month') AS start_date,
+  (date_trunc('month', CURRENT_DATE) - interval '1 second') AS end_date
+  ```
+
+  — явно первый и последний момент прошлого месяца.
+
+- Вместо `CROSS JOIN last_month lm` используется `JOIN last_month lm ON sr.created_at BETWEEN lm.start_date AND lm.end_date` — более корректное и читаемое подключение.
+
+---
+
+Этот запрос вернёт инженеров, которые сделали **максимальное число заявок с объектами типа "касса" в прошлом месяце**, с их атрибутами, названием региона и телефоном.
+
+[user]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание.
+
+дай информацию по количеству установленных устройств в Москве по месяцам
+
+=============================================
+[2026-07-08 21:01:46] [BUILD_MSGS]
+template_source: [system_role]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ БАЗЫ ===
+{DB_DESC}
+
+=== SQL-ЗАПРОС ===
+{SQL_QUERY}
+
+=== ДАННЫЕ ===
+{SQL_DATA}
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user_role]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание. 
+
+[task]
+{QUESTION}
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'SQL_QUERY', 'SQL_DATA', 'QUESTION']
+============================================================
+Дата и время запроса (2026-07-08 21:01:46):
+[system]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ БАЗЫ ===
+
+
+=== SQL-ЗАПРОС ===
+SELECT 
+    date_trunc('month', so.install_date) AS month,
+    COUNT(*) AS installed_count
+FROM service_objects so
+JOIN clients c ON so.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+WHERE r.name = 'Москва'
+  AND so.install_date IS NOT NULL
+GROUP BY month
+ORDER BY month;
+
+=== ДАННЫЕ ===
+month | installed_count
+--- | ---
+2023-08-01T00:00:00+03:00 | 2
+2023-09-01T00:00:00+03:00 | 5
+2023-10-01T00:00:00+03:00 | 6
+2023-11-01T00:00:00+03:00 | 5
+2023-12-01T00:00:00+03:00 | 6
+2024-01-01T00:00:00+03:00 | 9
+2024-02-01T00:00:00+03:00 | 4
+2024-03-01T00:00:00+03:00 | 3
+2024-04-01T00:00:00+03:00 | 3
+2024-05-01T00:00:00+03:00 | 2
+2024-06-01T00:00:00+03:00 | 4
+2024-07-01T00:00:00+03:00 | 5
+2024-08-01T00:00:00+03:00 | 6
+2024-09-01T00:00:00+03:00 | 6
+2024-10-01T00:00:00+03:00 | 7
+2024-11-01T00:00:00+03:00 | 7
+2024-12-01T00:00:00+03:00 | 4
+2025-01-01T00:00:00+03:00 | 9
+2025-02-01T00:00:00+03:00 | 2
+2025-03-01T00:00:00+03:00 | 4
+2025-04-01T00:00:00+03:00 | 4
+2025-05-01T00:00:00+03:00 | 11
+2025-06-01T00:00:00+03:00 | 2
+2025-07-01T00:00:00+03:00 | 2
+2025-08-01T00:00:00+03:00 | 6
+2025-09-01T00:00:00+03:00 | 4
+2025-10-01T00:00:00+03:00 | 5
+2025-11-01T00:00:00+03:00 | 5
+2025-12-01T00:00:00+03:00 | 7
+2026-01-01T00:00:00+03:00 | 3
+2026-02-01T00:00:00+03:00 | 7
+2026-03-01T00:00:00+03:00 | 4
+2026-04-01T00:00:00+03:00 | 5
+2026-05-01T00:00:00+03:00 | 1
+
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user]
+какие инженеры больше всего работали с кассами в прошлом месяце, дай имя региона, количество заявок на каждого инженера, все атрибуты инженеров и номер телефона каждого инженера
+
+[assistant]
+Для ответа на вопрос "какие инженеры больше всего работали с кассами в прошлом месяце" нужно:
+
+- Определить "прошлый месяц" относительно текущей даты.
+- Отфильтровать заявки по типу объекта "касса" (если "касса" — это тип объекта или связанный request_type, уточним).
+- Получить количество заявок по каждому инженеру.
+- Вернуть имя региона инженера, все атрибуты инженеров и его телефон.
+
+Проверим таблицы для получения нужных данных:
+
+- Тип объекта "касса" скорее всего представлен в таблице **service_objects** в колонке **type**.
+- В таблице **service_requests** есть заявки с полем **engineer_id**, полем **created_at** (дата создания заявки), **request_type** и временем работы.
+- Таблица **engineers** содержит данные инженеров, включая регион.
+- Таблица **engineer_contacts** содержит телефоны инженеров.
+- Таблица **regions** с названием региона.
+
+---
+
+### SQL-запрос
+
+```sql
+WITH last_month AS (
+    SELECT date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+           date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    CROSS JOIN last_month lm
+    WHERE so.type = 'касса'
+      AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+),
+engineer_request_counts AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM engineer_request_counts
+)
+
+SELECT 
+    e.*, 
+    r.name AS region_name, 
+    erc.request_count,
+    ec.phone
+FROM engineer_request_counts erc
+JOIN max_requests mr ON erc.request_count = mr.max_count
+JOIN engineers e ON e.id = erc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY erc.request_count DESC;
+```
+
+---
+
+### Объяснение
+
+- Определяем временной отрезок "прошлый месяц".
+- Фильтруем заявки по объектам с типом "касса" в `service_objects`.
+- Считаем количество заявок по каждому инженеру.
+- Отбираем инженеров с максимальным количеством заявок.
+- Возвращаем все атрибуты инженера, имя региона и телефон.
+
+---
+
+Если нужно не только "самых работающих", а всех инженеров, работавших с кассами в прошлом месяце, с их количеством заявок, то можно убрать ограничение по максимальному количеству:
+
+```sql
+...
+SELECT 
+    e.*, 
+    r.name AS region_name, 
+    erc.request_count,
+    ec.phone
+FROM engineer_request_counts erc
+JOIN engineers e ON e.id = erc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY erc.request_count DESC;
+```
+
+---
+
+Если нужна дополнительная помощь - уточните!
+
+[user]
+какие инженеры больше всего работали с кассами в прошлом месяце
+
+[assistant]
+### Анализ задачи
+
+Нужно найти инженеров, которые в **прошлом месяце** работали **с кассами** и определить, кто из них выполнил наибольшее количество заявок.
+
+**Ключевые моменты:**
+
+- Кассами скорее всего считаются сервисные объекты с типом `'касса'` в таблице `service_objects`.
+- Заявки по таким объектам хранятся в `service_requests`, где есть поле `object_id` (связь с объектом), `engineer_id` — инженер, и дата создания заявки в поле `created_at`.
+- Из таблицы `engineers` можно получить атрибуты инженера, а из `engineer_contacts` — телефон.
+- Регион инженера из таблицы `regions` через `engineers.region_id`.
+
+---
+
+### SQL-запрос для поиска инженеров, которые больше всего работали с кассами в прошлом месяце:
+
+```sql
+WITH last_month AS (
+    SELECT 
+        date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+        date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    CROSS JOIN last_month lm
+    WHERE so.type = 'касса'
+      AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+),
+requests_per_engineer AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM requests_per_engineer
+)
+SELECT 
+    e.*,
+    r.name AS region_name,
+    rpc.request_count,
+    ec.phone
+FROM requests_per_engineer rpc
+JOIN max_requests mr ON rpc.request_count = mr.max_count
+JOIN engineers e ON e.id = rpc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY rpc.request_count DESC;
+```
+
+---
+
+### Что делает запрос:
+
+- Определяет границы прошлого месяца.
+- Берёт все заявки по объектам типа `"касса"` за прошлый месяц.
+- Подсчитывает, сколько заявок выполнил каждый инженер.
+- Находит максимальное количество заявок.
+- Возвращает данные инженеров, которые сделали *максимум* заявок: их полные данные, регион и телефон.
+
+---
+
+Если нужно вывести всю группу инженеров с их количеством заявок (например, топ-5 или всех, кто работал с кассами), можно убрать ограничение по максимальному значению и добавить `ORDER BY` с лимитом.
+
+---
+
+Если есть вопросы — обращайтесь!
+
+[user]
+Почему запрос к базе выдает ошибку: 
+WITH last_month AS (
+    SELECT 
+        date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+        date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    CROSS JOIN last_month lm
+    WHERE so.type = 'касса'
+      AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+),
+requests_per_engineer AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM requests_per_engineer
+)
+SELECT 
+    e.*,
+    r.name AS region_name,
+    rpc.request_count,
+    ec.phone
+FROM requests_per_engineer rpc
+JOIN max_requests mr ON rpc.request_count = mr.max_count
+JOIN engineers e ON e.id = rpc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY rpc.request_count DESC;
+
+[assistant]
+Ошибка в представленном запросе возникает из-за того, что в CTE `cassa_requests` выбирается только поле `engineer_id` из `service_requests`, а затем в следующем CTE `requests_per_engineer` происходит группировка по `engineer_id`. 
+
+Сама по себе эта логика правильна, но можно предположить несколько причин ошибки, опираясь на схему и запрос:
+
+---
+
+### Возможные причины ошибки
+
+1. **Проблема с типом данных `created_at` и границами дат из CTE `last_month`**
+
+- В схеме поле `created_at` в таблице `service_requests` имеет тип `timestamp without time zone`.
+- В CTE `last_month` для `end_date` используется `date_trunc('month', CURRENT_DATE) - interval '1 second'`, что дает дату и время примерно на 23:59:59 последнего дня предыдущего месяца.
+- Однако лучше проверить, что `sr.created_at BETWEEN lm.start_date AND lm.end_date` — корректное сравнение для `timestamp` и без таймзоны. Обычно с `timestamp without time zone` проблем не возникает, но стоит удостовериться, что `start_date` и `end_date` тоже имеют тип timestamp, а не date.
+
+2. **В CTE `cassa_requests` нет поля `engineer_id`**
+
+- В таблице `service_requests` есть поле `engineer_id` — это факт.
+- Если по какой-то причине поле `engineer_id` может быть `NULL` в каких-то строках, запрос может работать, но в группировке — потенциально может возникать проблема. Но это не чаще всего вызывает ошибку.
+
+3. **Ошибка с повторяющимся именем алиаса**
+
+- В финальном SELECT вы ссылаетесь на таблицу `requests_per_engineer` с алиасом `rpc`, а в одном месте — возможно опечатка:
+  
+  ```sql
+  JOIN engineers e ON e.id = rpc.engineer_id
+  ```
+  
+- В вашем запросе такое есть, значит ошибок с именами нет.
+
+4. **Ошибка с использованием `CROSS JOIN last_month lm` в подзапросе**
+
+- Часто для подключения параметров из другого CTE достаточно использовать `JOIN` или просто подставить CTE переменные.
+- `CROSS JOIN` технически не запрещен, но если база не поддерживает вложенные CTE, может иногда вызывать проблемы.
+
+5. **Ошибки синтаксиса или опечатки**
+
+- Проверьте, что все имена таблиц и полей указаны корректно (например, `'касса'` — точное значение в поле `so.type`).
+- В схеме не видно ограничений, но стоит проверить, нет ли опечаток в именах.
+
+---
+
+### Частая реальная причина ошибки: неверное указание границ даты в условии
+
+В вашем запросе:
+
+```sql
+AND sr.created_at BETWEEN lm.start_date AND lm.end_date
+```
+
+- При текущем определении:
+
+```sql
+date_trunc('month', CURRENT_DATE) - interval '1 month' AS start_date,
+date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+```
+
+Если сегодня, например, 15 июня 2024, тогда:
+
+- `start_date` = 1 мая 2024 00:00:00
+- `end_date` = 31 мая 2024 23:59:59 (т.к. 1 июня 2024 00:00:00 - 1 секунда)
+
+Это правильно, однако лучше использовать `date_trunc('month', CURRENT_DATE) - interval '1 second'` — оно корректно, но менее читаемо. Иногда лучше сделать:
+
+```sql
+date_trunc('month', CURRENT_DATE - interval '1 month') AS start_date,
+date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+```
+
+чтобы явно получить первый и последний день прошлого месяца.
+
+---
+
+### Рекомендация: переписать CTE `last_month` так:
+
+```sql
+WITH last_month AS (
+    SELECT
+        date_trunc('month', CURRENT_DATE - interval '1 month') AS start_date,
+        (date_trunc('month', CURRENT_DATE) - interval '1 second') AS end_date
+)
+```
+
+Это понятнее и исключает неоднозначности.
+
+---
+
+### Резюме
+
+Если вы получили ошибку:
+
+- Проверьте, что `last_month` CTE правильно отдает timestamp без таймзоны, и `sr.created_at` сравнивается с ними.
+- Убедитесь, что в таблице `service_requests` действительно есть поле `engineer_id` и таблицы называются правильно.
+- Попробуйте заменить `CROSS JOIN last_month lm` на простое включение переменных из CTE в WHERE через подзапрос или `JOIN`.
+- Перепишите `last_month` CTE, чтобы было вот так:
+
+```sql
+WITH last_month AS (
+    SELECT
+      date_trunc('month', CURRENT_DATE - interval '1 month') AS start_date,
+      date_trunc('month', CURRENT_DATE) - interval '1 second' AS end_date
+)
+```
+
+---
+
+Если возможно, укажите текст ошибки — это поможет дать точный ответ.
+
+[user]
+дай исправленный SQL
+
+[assistant]
+Исправленный SQL-запрос с учётом корректного определения границ прошлого месяца и правильного подключения CTE `last_month`:
+
+```sql
+WITH last_month AS (
+    SELECT
+        date_trunc('month', CURRENT_DATE - interval '1 month') AS start_date,
+        (date_trunc('month', CURRENT_DATE) - interval '1 second') AS end_date
+),
+cassa_requests AS (
+    SELECT sr.engineer_id
+    FROM service_requests sr
+    JOIN service_objects so ON sr.object_id = so.id
+    JOIN last_month lm ON sr.created_at BETWEEN lm.start_date AND lm.end_date
+    WHERE so.type = 'касса'
+),
+requests_per_engineer AS (
+    SELECT engineer_id, COUNT(*) AS request_count
+    FROM cassa_requests
+    GROUP BY engineer_id
+),
+max_requests AS (
+    SELECT MAX(request_count) AS max_count
+    FROM requests_per_engineer
+)
+SELECT 
+    e.*,
+    r.name AS region_name,
+    rpc.request_count,
+    ec.phone
+FROM requests_per_engineer rpc
+JOIN max_requests mr ON rpc.request_count = mr.max_count
+JOIN engineers e ON e.id = rpc.engineer_id
+JOIN regions r ON e.region_id = r.id
+LEFT JOIN engineer_contacts ec ON e.id = ec.engineer_id
+ORDER BY rpc.request_count DESC;
+```
+
+---
+
+### Основные изменения:
+
+- В CTE `last_month` определение границ прошлого месяца:
+
+  ```sql
+  date_trunc('month', CURRENT_DATE - interval '1 month') AS start_date,
+  (date_trunc('month', CURRENT_DATE) - interval '1 second') AS end_date
+  ```
+
+  — явно первый и последний момент прошлого месяца.
+
+- Вместо `CROSS JOIN last_month lm` используется `JOIN last_month lm ON sr.created_at BETWEEN lm.start_date AND lm.end_date` — более корректное и читаемое подключение.
+
+---
+
+Этот запрос вернёт инженеров, которые сделали **максимальное число заявок с объектами типа "касса" в прошлом месяце**, с их атрибутами, названием региона и телефоном.
+
+[user]
+дай информацию по количеству установленных устройств в Москве по месяцам
+
+[assistant]
+Чтобы получить информацию по количеству установленных устройств в Москве по месяцам, используя схему базы данных, нужно:
+
+- Определить таблицу с устройствами — это `service_objects`.
+- В ней есть поле `install_date` — дата установки.
+- Есть связь с клиентом и через него — регион (`clients.region_id`), но напрямую регион у объектов отсутствует.
+- Для получения региона Москвы нужно связать объект с клиентом (`client_id`), потом клиента с регионом (`region_id`), затем получить название региона из таблицы `regions`.
+- Отфильтровать по региону "Москва".
+- Группировать по месяцам установки и считать количество.
+
+---
+
+### SQL-запрос для количества установленных устройств в Москве по месяцам
+
+```sql
+SELECT 
+    date_trunc('month', so.install_date) AS month,
+    COUNT(*) AS installed_count
+FROM service_objects so
+JOIN clients c ON so.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+WHERE r.name = 'Москва'
+  AND so.install_date IS NOT NULL
+GROUP BY month
+ORDER BY month;
+```
+
+---
+
+### Объяснение:
+
+- `date_trunc('month', so.install_date)` — округляем дату установки до начала месяца, чтобы группировать по месяцам.
+- Объединяем с `clients` и `regions`, чтобы проверить, что объект установлен у клиента из региона "Москва".
+- Фильтр по функции `WHERE r.name = 'Москва'`.
+- Считаем количество устройств, установленных в каждом месяце.
+
+---
+
+Если хотите, можно добавить дополнительные данные, например, разбивку по типам устройств (`so.type`). Если нужна — скажите.
+
+[user]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание.
+
+добавь информацию о том, что это за устройства
+
+=============================================
+Дата и время запроса (2026-07-08 21:02:33):
+[system]
+[system_role]
+Ты готовишь аналитические отчеты на русском языке
+
+[user_role]
+Ты — эксперт по аналитике данных.
+
+[task]
+Сделай подробный структурированный отчет по представленным результатам.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ БАЗЫ ===
+
+
+=== SQL-ЗАПРОС ===
+SELECT 
+    date_trunc('month', so.install_date) AS month,
+    so.type AS device_type,
+    COUNT(*) AS installed_count
+FROM service_objects so
+JOIN clients c ON so.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+WHERE r.name = 'Москва'
+  AND so.install_date IS NOT NULL
+GROUP BY month, device_type
+ORDER BY month, device_type LIMIT 1000
+
+=== ДАННЫЕ (первые 100 строк) ===
+month | device_type | installed_count
+------+-------------+----------------
+2023-07-31 21:00:00+00:00 | Банкомат | 2
+2023-08-31 21:00:00+00:00 | Банкомат | 2
+2023-08-31 21:00:00+00:00 | Касса | 2
+2023-08-31 21:00:00+00:00 | Терминал | 1
+2023-09-30 21:00:00+00:00 | Касса | 3
+2023-09-30 21:00:00+00:00 | Терминал | 3
+2023-10-31 21:00:00+00:00 | Банкомат | 2
+2023-10-31 21:00:00+00:00 | Касса | 2
+2023-10-31 21:00:00+00:00 | Терминал | 1
+2023-11-30 21:00:00+00:00 | Банкомат | 1
+2023-11-30 21:00:00+00:00 | Касса | 4
+2023-11-30 21:00:00+00:00 | Терминал | 1
+2023-12-31 21:00:00+00:00 | Банкомат | 1
+2023-12-31 21:00:00+00:00 | Касса | 7
+2023-12-31 21:00:00+00:00 | Терминал | 1
+2024-01-31 21:00:00+00:00 | Банкомат | 2
+2024-01-31 21:00:00+00:00 | Касса | 1
+2024-01-31 21:00:00+00:00 | Терминал | 1
+2024-02-29 21:00:00+00:00 | Банкомат | 1
+2024-02-29 21:00:00+00:00 | Касса | 1
+2024-02-29 21:00:00+00:00 | Терминал | 1
+2024-03-31 21:00:00+00:00 | Банкомат | 1
+2024-03-31 21:00:00+00:00 | Касса | 2
+2024-04-30 21:00:00+00:00 | Касса | 1
+2024-04-30 21:00:00+00:00 | Терминал | 1
+2024-05-31 21:00:00+00:00 | Касса | 3
+2024-05-31 21:00:00+00:00 | Терминал | 1
+2024-06-30 21:00:00+00:00 | Банкомат | 1
+2024-06-30 21:00:00+00:00 | Касса | 3
+2024-06-30 21:00:00+00:00 | Терминал | 1
+2024-07-31 21:00:00+00:00 | Банкомат | 2
+2024-07-31 21:00:00+00:00 | Касса | 3
+2024-07-31 21:00:00+00:00 | Терминал | 1
+2024-08-31 21:00:00+00:00 | Банкомат | 2
+2024-08-31 21:00:00+00:00 | Касса | 2
+2024-08-31 21:00:00+00:00 | Терминал | 2
+2024-09-30 21:00:00+00:00 | Банкомат | 1
+2024-09-30 21:00:00+00:00 | Касса | 2
+2024-09-30 21:00:00+00:00 | Терминал | 4
+2024-10-31 21:00:00+00:00 | Банкомат | 3
+2024-10-31 21:00:00+00:00 | Касса | 3
+2024-10-31 21:00:00+00:00 | Терминал | 1
+2024-11-30 21:00:00+00:00 | Банкомат | 1
+2024-11-30 21:00:00+00:00 | Касса | 2
+2024-11-30 21:00:00+00:00 | Терминал | 1
+2024-12-31 21:00:00+00:00 | Банкомат | 4
+2024-12-31 21:00:00+00:00 | Касса | 2
+2024-12-31 21:00:00+00:00 | Терминал | 3
+2025-01-31 21:00:00+00:00 | Касса | 2
+2025-02-28 21:00:00+00:00 | Банкомат | 1
+2025-02-28 21:00:00+00:00 | Касса | 1
+2025-02-28 21:00:00+00:00 | Терминал | 2
+2025-03-31 21:00:00+00:00 | Банкомат | 1
+2025-03-31 21:00:00+00:00 | Касса | 3
+2025-04-30 21:00:00+00:00 | Банкомат | 2
+2025-04-30 21:00:00+00:00 | Касса | 7
+2025-04-30 21:00:00+00:00 | Терминал | 2
+2025-05-31 21:00:00+00:00 | Банкомат | 2
+2025-06-30 21:00:00+00:00 | Банкомат | 1
+2025-06-30 21:00:00+00:00 | Терминал | 1
+2025-07-31 21:00:00+00:00 | Банкомат | 1
+2025-07-31 21:00:00+00:00 | Касса | 4
+2025-07-31 21:00:00+00:00 | Терминал | 1
+2025-08-31 21:00:00+00:00 | Банкомат | 2
+2025-08-31 21:00:00+00:00 | Касса | 2
+2025-09-30 21:00:00+00:00 | Банкомат | 2
+2025-09-30 21:00:00+00:00 | Касса | 2
+2025-09-30 21:00:00+00:00 | Терминал | 1
+2025-10-31 21:00:00+00:00 | Банкомат | 1
+2025-10-31 21:00:00+00:00 | Касса | 3
+2025-10-31 21:00:00+00:00 | Терминал | 1
+2025-11-30 21:00:00+00:00 | Банкомат | 3
+2025-11-30 21:00:00+00:00 | Касса | 3
+2025-11-30 21:00:00+00:00 | Терминал | 1
+2025-12-31 21:00:00+00:00 | Касса | 2
+2025-12-31 21:00:00+00:00 | Терминал | 1
+2026-01-31 21:00:00+00:00 | Банкомат | 2
+2026-01-31 21:00:00+00:00 | Касса | 5
+2026-02-28 21:00:00+00:00 | Банкомат | 1
+2026-02-28 21:00:00+00:00 | Касса | 2
+2026-02-28 21:00:00+00:00 | Терминал | 1
+2026-03-31 21:00:00+00:00 | Банкомат | 3
+2026-03-31 21:00:00+00:00 | Касса | 1
+2026-03-31 21:00:00+00:00 | Терминал | 1
+2026-04-30 21:00:00+00:00 | Касса | 1
+
+Отчет должен содержать:
+1. Краткое описание — что показывает запрос, какую бизнес-задачу решает
+2. Анализ ключевых показателей — цифры, закономерности, тенденции, аномалии. 
+Анализ ключевых показателей сделай в виде списка.
+3. Выводы и рекомендации — что можно улучшить, на что обратить внимание
+
+Заголовок отчета должен быть "По компании Рога и копыта"
+
+Внизу отчета слева должно быть написано "Дата формирования отчета: dd.mm.yyyy" (текущая дата)
+
+Оформи отчет в markdown. Используй заголовки ## для разделов.
+
+[user]
+СТРОГОЕ ПРЕДУПРЕЖДЕНИЕ О ДАТАХ:
+Сегодня 08.07.2026 (08.07.2026 21:02).
+Используй ТОЛЬКО эту дату как 'сегодня', 'текущая дата', 'дата отчёта'.
+1. Никогда не выдумывай и не изменяй даты.
+2. Если нужно указать дату отчёта — пиши '08.07.2026'.
+3. Даты из данных таблицы бери ТОЛЬКО из колонок с данными.
+4. Не заменяй даты из данных на другие.
+5. Все числовые значения должны быть взяты непосредственно из данных.
+6. Если в данных нет какой-то информации — не добавляй её от себя.
+7. Пиши отчёт строго по фактам из предоставленной таблицы.
+
+=============================================
+[2026-07-08 21:04:32] [BUILD_PROMPT]
+EXAMPLES: загружено 273 строк (limit=10)
+============================================================
+[2026-07-08 21:04:32] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Дата и время запроса (2026-07-08 21:04:32):
+[system]
+Ты генерируешь SQL
+
+[user]
+Ты — эксперт по SQL PostgreSQL.
+
+=== СХЕМА ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ ===
+
+
+=== ПРИМЕРЫ ===
+Запрос: Доходы по регионам?
+SQL: SELECT region, SUM(revenue) FROM mart_finance GROUP BY region;
+
+Запрос: Сколько активных заявок?
+SQL: SELECT status, COUNT(*) FROM service_requests WHERE status IN ('Открыта','В работе') GROUP BY status;
+
+Запрос: выполнения SLA?
+SQL: SELECT ROUND(AVG(CASE WHEN duration_hours <= 24 THEN 1 ELSE 0 END)*100,2) AS sla_percent FROM service_requests WHERE request_type = 'Инцидент' AND status = 'Закрыта';
+
+
+Запрос: худшие регионы по SLA?
+SQL: SELECT r.name, AVG(CASE WHEN sr.duration_hours <= 24 THEN 1 ELSE 0 END) AS sla_rate FROM service_requests sr JOIN service_objects so ON sr.object_id = so.id JOIN clients c ON so.client_id = c.id JOIN regions r ON c.region_id = r.id WHERE sr.status = 'Закрыта' GROUP BY r.name ORDER BY sla_rate ASC;
+
+Запрос: Топ инженеров
+SQL: SELECT e.full_name, COUNT(*) AS closed_requests FROM engineers e JOIN service_requests sr ON e.id = sr.engineer_id WHERE sr.status = 'Закрыта' GROUP BY e.full_name ORDER BY closed_requests DESC LIMIT 10;
+
+Запрос: кто работает дольше всех
+SQL: SELECT
+    e.full_name,
+    AVG(sr.duration_hours) AS avg_time
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+дай информацию по количеству установленных устройств в Москве по месяцам и добавь информацию о том, что это за устройства
+
+SQL:
+
+=============================================
+Дата и время запроса (2026-07-08 21:04:53):
+[system]
+[system_role]
+Ты готовишь аналитические отчеты на русском языке
+
+[user_role]
+Ты — эксперт по аналитике данных.
+
+[task]
+Сделай подробный структурированный отчет по представленным результатам.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ БАЗЫ ===
+
+
+=== SQL-ЗАПРОС ===
+SELECT
+    DATE_TRUNC('month', install_date) AS month,
+    type,
+    COUNT(*) AS device_count
+FROM
+    service_objects
+WHERE
+    client_id IN (
+        SELECT id FROM clients WHERE region_id = (
+            SELECT id FROM regions WHERE name = 'Москва'
+        )
+    )
+GROUP BY
+    DATE_TRUNC('month', install_date),
+    type
+ORDER BY
+    month,
+    type LIMIT 1000
+
+=== ДАННЫЕ (первые 100 строк) ===
+month | type | device_count
+------+------+-------------
+2023-07-31 21:00:00+00:00 | Банкомат | 2
+2023-08-31 21:00:00+00:00 | Банкомат | 2
+2023-08-31 21:00:00+00:00 | Касса | 2
+2023-08-31 21:00:00+00:00 | Терминал | 1
+2023-09-30 21:00:00+00:00 | Касса | 3
+2023-09-30 21:00:00+00:00 | Терминал | 3
+2023-10-31 21:00:00+00:00 | Банкомат | 2
+2023-10-31 21:00:00+00:00 | Касса | 2
+2023-10-31 21:00:00+00:00 | Терминал | 1
+2023-11-30 21:00:00+00:00 | Банкомат | 1
+2023-11-30 21:00:00+00:00 | Касса | 4
+2023-11-30 21:00:00+00:00 | Терминал | 1
+2023-12-31 21:00:00+00:00 | Банкомат | 1
+2023-12-31 21:00:00+00:00 | Касса | 7
+2023-12-31 21:00:00+00:00 | Терминал | 1
+2024-01-31 21:00:00+00:00 | Банкомат | 2
+2024-01-31 21:00:00+00:00 | Касса | 1
+2024-01-31 21:00:00+00:00 | Терминал | 1
+2024-02-29 21:00:00+00:00 | Банкомат | 1
+2024-02-29 21:00:00+00:00 | Касса | 1
+2024-02-29 21:00:00+00:00 | Терминал | 1
+2024-03-31 21:00:00+00:00 | Банкомат | 1
+2024-03-31 21:00:00+00:00 | Касса | 2
+2024-04-30 21:00:00+00:00 | Касса | 1
+2024-04-30 21:00:00+00:00 | Терминал | 1
+2024-05-31 21:00:00+00:00 | Касса | 3
+2024-05-31 21:00:00+00:00 | Терминал | 1
+2024-06-30 21:00:00+00:00 | Банкомат | 1
+2024-06-30 21:00:00+00:00 | Касса | 3
+2024-06-30 21:00:00+00:00 | Терминал | 1
+2024-07-31 21:00:00+00:00 | Банкомат | 2
+2024-07-31 21:00:00+00:00 | Касса | 3
+2024-07-31 21:00:00+00:00 | Терминал | 1
+2024-08-31 21:00:00+00:00 | Банкомат | 2
+2024-08-31 21:00:00+00:00 | Касса | 2
+2024-08-31 21:00:00+00:00 | Терминал | 2
+2024-09-30 21:00:00+00:00 | Банкомат | 1
+2024-09-30 21:00:00+00:00 | Касса | 2
+2024-09-30 21:00:00+00:00 | Терминал | 4
+2024-10-31 21:00:00+00:00 | Банкомат | 3
+2024-10-31 21:00:00+00:00 | Касса | 3
+2024-10-31 21:00:00+00:00 | Терминал | 1
+2024-11-30 21:00:00+00:00 | Банкомат | 1
+2024-11-30 21:00:00+00:00 | Касса | 2
+2024-11-30 21:00:00+00:00 | Терминал | 1
+2024-12-31 21:00:00+00:00 | Банкомат | 4
+2024-12-31 21:00:00+00:00 | Касса | 2
+2024-12-31 21:00:00+00:00 | Терминал | 3
+2025-01-31 21:00:00+00:00 | Касса | 2
+2025-02-28 21:00:00+00:00 | Банкомат | 1
+2025-02-28 21:00:00+00:00 | Касса | 1
+2025-02-28 21:00:00+00:00 | Терминал | 2
+2025-03-31 21:00:00+00:00 | Банкомат | 1
+2025-03-31 21:00:00+00:00 | Касса | 3
+2025-04-30 21:00:00+00:00 | Банкомат | 2
+2025-04-30 21:00:00+00:00 | Касса | 7
+2025-04-30 21:00:00+00:00 | Терминал | 2
+2025-05-31 21:00:00+00:00 | Банкомат | 2
+2025-06-30 21:00:00+00:00 | Банкомат | 1
+2025-06-30 21:00:00+00:00 | Терминал | 1
+2025-07-31 21:00:00+00:00 | Банкомат | 1
+2025-07-31 21:00:00+00:00 | Касса | 4
+2025-07-31 21:00:00+00:00 | Терминал | 1
+2025-08-31 21:00:00+00:00 | Банкомат | 2
+2025-08-31 21:00:00+00:00 | Касса | 2
+2025-09-30 21:00:00+00:00 | Банкомат | 2
+2025-09-30 21:00:00+00:00 | Касса | 2
+2025-09-30 21:00:00+00:00 | Терминал | 1
+2025-10-31 21:00:00+00:00 | Банкомат | 1
+2025-10-31 21:00:00+00:00 | Касса | 3
+2025-10-31 21:00:00+00:00 | Терминал | 1
+2025-11-30 21:00:00+00:00 | Банкомат | 3
+2025-11-30 21:00:00+00:00 | Касса | 3
+2025-11-30 21:00:00+00:00 | Терминал | 1
+2025-12-31 21:00:00+00:00 | Касса | 2
+2025-12-31 21:00:00+00:00 | Терминал | 1
+2026-01-31 21:00:00+00:00 | Банкомат | 2
+2026-01-31 21:00:00+00:00 | Касса | 5
+2026-02-28 21:00:00+00:00 | Банкомат | 1
+2026-02-28 21:00:00+00:00 | Касса | 2
+2026-02-28 21:00:00+00:00 | Терминал | 1
+2026-03-31 21:00:00+00:00 | Банкомат | 3
+2026-03-31 21:00:00+00:00 | Касса | 1
+2026-03-31 21:00:00+00:00 | Терминал | 1
+2026-04-30 21:00:00+00:00 | Касса | 1
+
+Отчет должен содержать:
+1. Краткое описание — что показывает запрос, какую бизнес-задачу решает
+2. Анализ ключевых показателей — цифры, закономерности, тенденции, аномалии. 
+Анализ ключевых показателей сделай в виде списка.
+3. Выводы и рекомендации — что можно улучшить, на что обратить внимание
+
+Заголовок отчета должен быть "По компании Рога и копыта"
+
+Внизу отчета слева должно быть написано "Дата формирования отчета: dd.mm.yyyy" (текущая дата)
+
+Оформи отчет в markdown. Используй заголовки ## для разделов.
+
+[user]
+СТРОГОЕ ПРЕДУПРЕЖДЕНИЕ О ДАТАХ:
+Сегодня 08.07.2026 (08.07.2026 21:04).
+Используй ТОЛЬКО эту дату как 'сегодня', 'текущая дата', 'дата отчёта'.
+1. Никогда не выдумывай и не изменяй даты.
+2. Если нужно указать дату отчёта — пиши '08.07.2026'.
+3. Даты из данных таблицы бери ТОЛЬКО из колонок с данными.
+4. Не заменяй даты из данных на другие.
+5. Все числовые значения должны быть взяты непосредственно из данных.
+6. Если в данных нет какой-то информации — не добавляй её от себя.
+7. Пиши отчёт строго по фактам из предоставленной таблицы.
+
+=============================================

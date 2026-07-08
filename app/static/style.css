@@ -70,9 +70,9 @@
   --theme-selector-border: #3a3a6a;
   --theme-selector-text: #f5f5f5;
   --theme-selector-label: #aaa;
-  --top-bar-bg: #0d1558;
-  --top-bar-border: #1a2580;
---sidebar-bg: linear-gradient(180deg, #16213e 0%, #0f0f2d 100%);
+  --top-bar-bg: #3B3B3B;
+  --top-bar-border: #4a4a4a;
+--sidebar-bg: #3B3B3B;
   --sidebar-color: #fff;
   --sidebar-link-color: #adb5bd;
   --sidebar-link-hover-bg: rgba(255,255,255,0.1);
@@ -457,6 +457,17 @@ body {
 .timer-row { margin-top: 15px; font-size: 14px; color: var(--text-timer); text-align: left; }
 #loading { color: var(--text-loading); font-size: 14px; display: none; }
 
+.loading-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; }
+.loading-overlay.show { display: flex; }
+.loading-overlay .loading-panel { background: #2a2a2a; border-radius: 16px; padding: 32px 48px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
+.loading-overlay .loading-text { color: #f5f5f5; font-size: 16px; font-weight: 500; margin-top: 18px; }
+.loading-overlay .typing { display: flex; gap: 10px; }
+.loading-overlay .typing span { width: 14px; height: 14px; border-radius: 50%; background: var(--gradient-primary); animation: typingBounce 1.4s infinite ease-in-out both; }
+.loading-overlay .typing span:nth-child(1) { animation-delay: 0s; }
+.loading-overlay .typing span:nth-child(2) { animation-delay: 0.2s; }
+.loading-overlay .typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingBounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
 .action-buttons { display: flex; justify-content: flex-start; align-items: center; gap: 15px; flex-wrap: wrap; margin-top: 25px; }
 
 .pagination { display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 15px; }
@@ -574,11 +585,16 @@ body {
    ══════════════════════════════════ */
 [data-theme] .card-body { background: var(--card-bg); color: var(--text-primary); }
 [data-theme] .card { background: var(--card-bg); color: var(--text-primary); border-color: var(--border-default); }
-[data-theme] .table { background: var(--card-bg); color: var(--text-primary); }
-[data-theme] .table thead th { background: var(--table-header-bg); color: var(--text-primary); border-color: var(--table-header-border); }
+[data-theme] .table { --bs-table-bg: var(--card-bg); --bs-table-color: var(--text-primary); --bs-table-border-color: var(--border-light); background: var(--card-bg); color: var(--text-primary); border-color: var(--border-light); }
+[data-theme] .table thead th { --bs-table-bg: var(--table-header-bg); background: var(--table-header-bg); color: var(--text-primary); border-color: var(--table-header-border); }
 [data-theme] .table tbody td { color: var(--text-primary); border-color: var(--border-light); }
-[data-theme] .table-hover tbody tr:hover { background: var(--bg-surface-alt) !important; }
+[data-theme] .table-hover tbody tr:hover { --bs-table-hover-bg: var(--bg-surface-alt); background: var(--bg-surface-alt) !important; }
+[data-theme] .table-striped > tbody > tr:nth-of-type(odd) > * { --bs-table-accent-bg: var(--bg-table-alt); color: var(--text-primary); }
 [data-theme] .table-responsive { background: var(--card-bg); }
+[data-theme] .table .btn-outline-primary { color: var(--text-accent); border-color: var(--text-accent); background: transparent; }
+[data-theme] .table .btn-outline-primary:hover { background: var(--text-accent); color: var(--text-on-primary); }
+[data-theme] .table .btn-outline-danger { color: var(--text-error); border-color: var(--text-error); background: transparent; }
+[data-theme] .table .btn-outline-danger:hover { background: var(--gradient-danger); color: var(--text-on-primary); }
 [data-theme] .bg-light { background: var(--bg-surface-alt) !important; color: var(--text-primary); }
 [data-theme] .bg-white { background: var(--card-bg) !important; color: var(--text-primary); }
 [data-theme] .text-muted { color: var(--text-secondary) !important; }

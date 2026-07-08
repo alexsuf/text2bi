@@ -98,16 +98,7 @@ def menu_items():
 
 
 def llm_complete(messages, timeout=LLM_TIMEOUT):
-    import logging
-    logging.basicConfig(filename='./downloads/llm.txt', level=logging.INFO)
-
     cfg = get_default_llm_config()
-    logging.info({
-        'url': cfg.get('base_url'),
-        'api_key': cfg.get('api_key'),
-        'messages': messages,
-        'timeout': timeout
-    })
 
     result, exc = [], []
 
@@ -195,6 +186,7 @@ def index():
                 prompt_data = build_prompt(question, schema_text, db_description)
                 llm_messages = [{"role": "system", "content": prompt_data["system_role"]},
                                 {"role": "user", "content": prompt_data["user_content"]}]
+                log_llm_request(llm_messages)
                 resp = llm_complete(llm_messages)
                 sql_query = clean_sql(resp.choices[0].message.content)
                 if check_sql:
@@ -264,6 +256,7 @@ def chat_ask():
         for i, h in enumerate(history):
             msgs.insert(insert_pos + i, {"role": h["role"], "content": h["content"]})
 
+        log_llm_request(msgs)
         resp = llm_complete(msgs)
         answer = resp.choices[0].message.content.strip()
         return jsonify({"status": "ok", "answer": render_markdown(answer), "answer_raw": answer})
@@ -477,6 +470,7 @@ def table_chat_ask():
             "SCHEMA_TEXT": get_schema(), "DB_DESC": db_description,
             "QUESTION": question, "TABLES": tbl
         })
+        log_llm_request(msgs)
         resp = llm_complete(msgs)
         answer = resp.choices[0].message.content.strip()
         return jsonify({"status": "ok", "answer": render_markdown(answer), "answer_raw": answer})
