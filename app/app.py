@@ -5,22 +5,21 @@ from openai import OpenAI
 from db import get_db, hash_password
 from sqlalchemy.orm import joinedload
 from models import (
-    SystemConfig, ConnectionSetting, Prompt, SavedQuery, ReportPromptCase, User,
+    SystemConfig, ConnectionSetting, Prompt, SavedQuery, ReportPromptCase, PromptReport, User,
     LLMProvider, LLMModel, LLMFallback
 )
 from utils import (
     REDASH_URL, REDASH_API_KEY, REDASH_DATA_SOURCE_ID,
     DOWNLOADS_DIR, LLM_MODEL, LLM_TOKEN, get_openai_client,
     db_description, get_connection, get_schema,
-    build_prompt, build_messages_from_template, build_messages_from_prompt_key,
+    build_prompt, build_messages_from_prompt_key,
     validate_and_fix_sql, analyze_sql_error, explain_sql,
     clean_sql, fix_limit, validate_sql, run_sql_to_df, sql_to_one_line,
     render_markdown, save_excel, build_charts, build_chart_body_html,
     build_chart_body_only, save_chart_outputs, create_jpg_collage, check_sql,
     generate_report, log_llm_request, log_message, log_request_response,
     _add_formatted_text, modify_sql_for_business_terms,
-    get_system_config, refresh_system_config, get_default_connection,
-    get_dated_filename, load_prompt_template_from_db, load_prompt_template,
+    get_dated_filename, load_prompt_template_from_db,
     get_default_llm_config, get_default_api_key,
 )
 
@@ -28,6 +27,27 @@ app = Flask(__name__, template_folder="templates", static_folder="static")
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "text2bi-secret-key-change-me")
 LLM_TIMEOUT = 120
 USERS = {"alex": "secret", "max": "secret"}
+
+
+# ── Context processor: user_theme + default_model ─────────────────
+@app.context_processor
+def inject_globals():
+    theme = "dark"
+    model_name = "по умолчанию"
+    try:
+        with get_db() as db:
+            u = current_user()
+            if u:
+                theme = (u.theme or "dark") if getattr(u, 'theme', None) else "dark"
+            default_model = db.query(LLMModel).filter(
+                LLMModel.is_default == True,
+                LLMModel.enabled == True
+            ).first()
+            if default_model:
+                model_name = default_model.display_name or default_model.model_name
+    except Exception:
+        pass
+    return {"user_theme": theme, "default_model_name": model_name}
 
 
 # ── Auth helpers ─────────────────────────────────────────────────
@@ -67,10 +87,9 @@ def menu_items():
     ]
     if current_user():
         items.extend([
-            {"href": "/colors", "icon": "bi-palette", "label": "Цвета"},
-            {"href": "/config", "icon": "bi-sliders", "label": "Параметры"},
             {"href": "/connections", "icon": "bi-plug", "label": "Подключения"},
             {"href": "/prompts", "icon": "bi-file-text", "label": "Промпты"},
+            {"href": "/prompt_reports", "icon": "bi-file-earmark-text", "label": "Промпты-отчёты"},
             {"href": "/providers", "icon": "bi-cloud", "label": "Провайдеры"},
             {"href": "/models", "icon": "bi-cpu", "label": "Модели"},
             {"href": "/fallbacks", "icon": "bi-arrow-repeat", "label": "Фолбэки"},
@@ -159,6 +178,8 @@ def index():
     result = None
     sql_query = ""
     elapsed_time = None
+    model_time = None
+    sql_time = None
     question = ""
     analysis = None
     error_msg = None
@@ -170,6 +191,7 @@ def index():
         try:
             schema_text = get_schema()
             if not sql_query:
+                t0 = time.time()
                 prompt_data = build_prompt(question, schema_text, db_description)
                 llm_messages = [{"role": "system", "content": prompt_data["system_role"]},
                                 {"role": "user", "content": prompt_data["user_content"]}]
@@ -177,8 +199,10 @@ def index():
                 sql_query = clean_sql(resp.choices[0].message.content)
                 if check_sql:
                     sql_query = validate_and_fix_sql(question, sql_query, schema_text, db_description)
+                model_time = int(time.time() - t0)
 
             if sql_query:
+                t1 = time.time()
                 sql_query = fix_limit(clean_sql(sql_query))
                 validate_sql(sql_query)
                 conn = get_connection()
@@ -189,6 +213,7 @@ def index():
                 cur.close()
                 conn.close()
                 result = {"columns": colnames, "rows": rows}
+                sql_time = int(time.time() - t1)
             elapsed_time = int(time.time() - start_time)
         except Exception as e:
             error_msg = str(e)
@@ -201,6 +226,7 @@ def index():
     u = current_user()
     return render_template("index.html",
                            result=result, sql_query=sql_query, elapsed_time=elapsed_time,
+                           model_time=model_time, sql_time=sql_time,
                            question=question, analysis=analysis, error=error_msg,
                            llm_model=LLM_MODEL, menu=menu_items(), user=u)
 
@@ -230,7 +256,7 @@ def chat_ask():
             return jsonify({"status": "error", "message": "Пустой вопрос"})
 
         schema_text = get_schema()
-        msgs = build_messages_from_template("prompt_chat_ask.txt", {
+        msgs = build_messages_from_prompt_key("prompt_chat_ask", {
             "SCHEMA_TEXT": schema_text, "DB_DESC": db_description,
             "SQL_QUERY": sql_query, "SQL_DATA": sql_data, "QUESTION": question
         })
@@ -243,6 +269,50 @@ def chat_ask():
         return jsonify({"status": "ok", "answer": render_markdown(answer), "answer_raw": answer})
     except TimeoutError:
         return jsonify({"status": "error", "message": "LLM timeout"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  SAVE CHAT OUTPUT (Word / Text / Excel)
+# ═══════════════════════════════════════════════════════════════════
+@app.route("/save_chat_output", methods=["POST"])
+def save_chat_output():
+    try:
+        data = request.get_json()
+        content = data.get("content", "").strip()
+        fmt = data.get("format", "docx").strip()
+        if not content:
+            return jsonify({"status": "error", "message": "Пустое содержимое"})
+
+        date_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+
+        if fmt == "docx":
+            from docx import Document
+            doc = Document()
+            from docx.shared import Pt
+            style = doc.styles['Normal']
+            style.font.size = Pt(11)
+            doc.add_paragraph(content)
+            filename = f"chat_output_{date_str}.docx"
+            filepath = os.path.join(DOWNLOADS_DIR, filename)
+            doc.save(filepath)
+        elif fmt == "xlsx":
+            import pandas as pd
+            lines = [line for line in content.split('\n') if line.strip()]
+            df = pd.DataFrame({"Ответ": lines})
+            filename = f"chat_output_{date_str}.xlsx"
+            filepath = os.path.join(DOWNLOADS_DIR, filename)
+            df.to_excel(filepath, index=False)
+        else:
+            filename = f"chat_output_{date_str}.txt"
+            filepath = os.path.join(DOWNLOADS_DIR, filename)
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(content)
+
+        return jsonify({"status": "ok", "filename": filename,
+                        "url": url_for('download_file', filename=filename)})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
@@ -298,8 +368,6 @@ def save_prompt_route():
     s = data.get("sql_query", "").strip()
     if not q or not s:
         return jsonify({"status": "error"}), 400
-    with open("qa.txt", "a", encoding="utf-8") as f:
-        f.write(f"Запрос: {q}\nSQL: {s};\n\n")
     return jsonify({"status": "ok"})
 
 
@@ -313,6 +381,7 @@ def generate_report_route():
         sql = clean_sql(data.get("sql_query", ""))
         question = data.get("question", "").strip()
         charts = data.get("include_charts", False)
+        prompt_id = data.get("prompt_id")
         if not sql:
             return jsonify({"status": "error", "message": "Пустой SQL"})
         sql = fix_limit(sql)
@@ -326,7 +395,7 @@ def generate_report_route():
                 chart_paths.append(cp)
         fname = get_dated_filename("report", "docx", question or "report")
         path = os.path.join(DOWNLOADS_DIR, fname)
-        generate_report(get_schema(), db_description, sql, df, path, chart_paths=chart_paths)
+        generate_report(get_schema(), db_description, sql, df, path, chart_paths=chart_paths, prompt_id=prompt_id)
         for cp in chart_paths:
             try: os.remove(cp)
             except: pass
@@ -363,7 +432,19 @@ def graf_page():
     if r: return r
     sql = request.args.get("sql_query", "").strip()
     table_mode = request.args.get("table_mode", "") == "1"
-    return render_template("graf.html", sql_query=sql, columns=[], rows=[],
+    columns, rows = [], []
+    if sql and not table_mode:
+        try:
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute(fix_limit(clean_sql(sql)))
+            columns = [d[0] for d in cur.description]
+            rows = [[_sv(v) for v in r] for r in cur.fetchall()]
+            cur.close()
+            conn.close()
+        except Exception:
+            pass
+    return render_template("graf.html", sql_query=sql, columns=columns, rows=rows,
                            table_mode=table_mode, menu=menu_items(), user=current_user())
 
 
@@ -392,7 +473,7 @@ def table_chat_ask():
             return jsonify({"status": "error", "message": "Пустой вопрос"})
         tbl = "\n".join([" | ".join(str(c) for c in cols)] +
                         [" | ".join(str(v) for v in r) for r in rows[:50]])
-        msgs = build_messages_from_template("prompt_chat_ask_all.txt", {
+        msgs = build_messages_from_prompt_key("prompt_chat_ask_all", {
             "SCHEMA_TEXT": get_schema(), "DB_DESC": db_description,
             "QUESTION": question, "TABLES": tbl
         })
@@ -457,10 +538,12 @@ def export_chart(fmt):
 # ═══════════════════════════════════════════════════════════════════
 @app.route("/download_file/<path:filename>")
 def download_file(filename):
-    path = os.path.normpath(os.path.join(DOWNLOADS_DIR, os.path.basename(filename)))
-    if not path.startswith(os.path.normpath(DOWNLOADS_DIR)):
+    filepath = os.path.abspath(os.path.join(DOWNLOADS_DIR, os.path.basename(filename)))
+    if not filepath.startswith(os.path.abspath(DOWNLOADS_DIR)):
         return "Forbidden", 403
-    return send_file(path, as_attachment=True)
+    if not os.path.exists(filepath):
+        return "File not found", 404
+    return send_file(filepath, as_attachment=True)
 
 
 @app.route("/download_chart/<file_type>")
@@ -563,18 +646,6 @@ def speech_route():
     text = data.get("text", "")
     print(f"[VOICE] {text}", flush=True)
     return jsonify({"status": "ok"})
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  CONFIG PAGE — системные параметры
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/config")
-def config_page():
-    r = login_required()
-    if r: return r
-    with get_db() as db:
-        cfg = {r.key: r.value for r in db.query(SystemConfig).all()}
-    return render_template("config2.html", config=cfg, menu=menu_items(), user=current_user())
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -862,24 +933,6 @@ def fallbacks_delete(fid):
     return redirect(url_for('fallbacks_list'))
 
 
-@app.route("/api/config", methods=["GET", "POST"])
-def api_config():
-    with get_db() as db:
-        if request.method == "GET":
-            cfg = {r.key: r.value for r in db.query(SystemConfig).all()}
-            return jsonify(cfg)
-        data = request.get_json()
-        for k, v in data.items():
-            row = db.query(SystemConfig).filter(SystemConfig.key == k).first()
-            if row:
-                row.value = str(v)
-            else:
-                db.add(SystemConfig(key=k, value=str(v)))
-        db.commit()
-        refresh_system_config()
-    return jsonify({"status": "ok"})
-
-
 # ═══════════════════════════════════════════════════════════════════
 #  API: Connections CRUD
 # ═══════════════════════════════════════════════════════════════════
@@ -934,20 +987,16 @@ def api_prompts(pid=None):
     with get_db() as db:
         if request.method == "GET" and pid is None:
             return jsonify([{"id": p.id, "name": p.name, "prompt_key": p.prompt_key,
-                             "category": p.category, "content": p.content,
-                             "is_active": p.is_active, "is_default": p.is_default}
+                             "category": p.category, "content": p.content}
                             for p in db.query(Prompt).all()])
         if request.method == "GET" and pid is not None:
             p = db.query(Prompt).filter(Prompt.id == pid).first()
             return jsonify({"id": p.id, "name": p.name, "prompt_key": p.prompt_key,
-                            "category": p.category, "content": p.content,
-                            "is_active": p.is_active}) if p else ("", 404)
+                            "category": p.category, "content": p.content}) if p else ("", 404)
         if request.method == "POST":
             data = request.get_json()
             p = Prompt(name=data["name"], prompt_key=data["prompt_key"],
-                       category=data.get("category", "general"), content=data["content"],
-                       user_id=data.get("user_id"), is_active=data.get("is_active", True),
-                       is_default=data.get("is_default", False))
+                       category=data.get("category", "general"), content=data["content"])
             db.add(p)
             db.commit()
             return jsonify({"status": "ok", "id": p.id})
@@ -955,12 +1004,72 @@ def api_prompts(pid=None):
             p = db.query(Prompt).filter(Prompt.id == pid).first()
             if not p: return "", 404
             data = request.get_json()
-            for f in ["name", "prompt_key", "category", "content", "is_active", "is_default"]:
+            for f in ["name", "prompt_key", "category", "content"]:
                 if f in data: setattr(p, f, data[f])
             db.commit()
             return jsonify({"status": "ok"})
         if request.method == "DELETE":
             db.query(Prompt).filter(Prompt.id == pid).delete()
+            db.commit()
+            return jsonify({"status": "ok"})
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  PROMPT REPORT — page listing
+# ═══════════════════════════════════════════════════════════════════
+@app.route("/prompt_reports")
+def prompt_reports_page():
+    r = login_required()
+    if r: return r
+    uid = user_id()
+    with get_db() as db:
+        reports = db.query(PromptReport).filter(PromptReport.user_id == uid).all()
+    return render_template("prompt_reports_list.html", reports=reports, menu=menu_items(), user=current_user())
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  API: PromptReport CRUD
+# ═══════════════════════════════════════════════════════════════════
+@app.route("/api/prompt_reports", methods=["GET", "POST"])
+@app.route("/api/prompt_reports/<int:rid>", methods=["GET", "PUT", "DELETE"])
+def api_prompt_reports(rid=None):
+    uid = user_id()
+    with get_db() as db:
+        if request.method == "GET" and rid is None:
+            return jsonify([{"id": r.id, "name": r.name,
+                             "content": r.content, "is_active": r.is_active,
+                             "is_default": r.is_default}
+                            for r in db.query(PromptReport).filter(PromptReport.user_id == uid).all()])
+        if request.method == "GET" and rid is not None:
+            r = db.query(PromptReport).filter(PromptReport.id == rid, PromptReport.user_id == uid).first()
+            return jsonify({"id": r.id, "name": r.name,
+                            "content": r.content, "is_active": r.is_active,
+                            "is_default": r.is_default}) if r else ("", 404)
+        if request.method == "POST":
+            data = request.get_json()
+            is_default = data.get("is_default", False)
+            if is_default:
+                db.query(PromptReport).filter(PromptReport.user_id == uid).update({PromptReport.is_default: False})
+                db.flush()
+            r = PromptReport(user_id=uid, name=data["name"],
+                            content=data.get("content", ""),
+                            is_active=data.get("is_active", True),
+                            is_default=is_default)
+            db.add(r)
+            db.commit()
+            return jsonify({"status": "ok", "id": r.id})
+        if request.method == "PUT":
+            r = db.query(PromptReport).filter(PromptReport.id == rid, PromptReport.user_id == uid).first()
+            if not r: return "", 404
+            data = request.get_json()
+            for f in ["name", "content", "is_active", "is_default"]:
+                if f in data: setattr(r, f, data[f])
+            if data.get("is_default"):
+                db.query(PromptReport).filter(PromptReport.id != rid, PromptReport.user_id == uid).update({PromptReport.is_default: False})
+            db.commit()
+            return jsonify({"status": "ok"})
+        if request.method == "DELETE":
+            db.query(PromptReport).filter(PromptReport.id == rid, PromptReport.user_id == uid).delete()
             db.commit()
             return jsonify({"status": "ok"})
 

@@ -2,46 +2,59 @@
 {% block title %}Запрос{% endblock %}
 {% block extra_css %}
 .header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
-.header-row h2 { color:#1a1e2e; font-size:20px; }
-.card { background:#fff; border:none; border-radius:10px; padding:16px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
-.card label { color:#495057; font-size:12px; display:block; margin-bottom:6px; text-transform:uppercase; font-weight:500; }
-.card textarea, .card input { width:100%; background:#fff; border:1px solid #ced4da; border-radius:6px; color:#212529; padding:10px; font-size:14px; font-family:monospace; resize:vertical; }
-.card textarea:focus, .card input:focus { border-color:#0d6efd; box-shadow:0 0 0 0.2rem rgba(13,110,253,0.15); outline:none; }
+.header-row h2 { color:var(--text-accent); font-size:20px; }
+.card { background:var(--card-bg); border:none; border-radius:10px; padding:16px; margin-bottom:16px; box-shadow:var(--card-shadow); transition:background-color 0.3s ease; }
+.card label { color:var(--text-secondary); font-size:12px; display:block; margin-bottom:6px; text-transform:uppercase; font-weight:500; }
+.card textarea, .card input { width:100%; background:var(--bg-input); border:1px solid var(--border-input); border-radius:6px; color:var(--text-primary); padding:10px; font-size:14px; font-family:monospace; resize:vertical; }
+.card textarea:focus, .card input:focus { border-color:var(--border-input-focus); box-shadow:0 0 0 0.2rem rgba(13,110,253,0.15); outline:none; }
 .btn-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
 .btn { padding:8px 16px; border-radius:6px; border:none; font-size:13px; cursor:pointer; font-weight:500; transition:.15s; display:inline-flex; align-items:center; gap:6px; }
-.btn-primary { background:#0d6efd; color:#fff; }
-.btn-primary:hover { background:#0b5ed7; }
-.btn-blue { background:#0d6efd; color:#fff; }
-.btn-blue:hover { background:#0b5ed7; }
-.btn-red { background:#dc3545; color:#fff; }
-.btn-red:hover { background:#bb2d3b; }
-.btn-outline { background:transparent; color:#0d6efd; border:1px solid #0d6efd; }
-.btn-outline:hover { background:#0d6efd; color:#fff; }
-.sql-block { background:#f8f9fa; border:1px solid #e9ecef; border-radius:6px; padding:12px; margin:12px 0; font-family:monospace; font-size:13px; color:#055160; white-space:pre-wrap; overflow-x:auto; max-height:200px; overflow-y:auto; }
+.btn-primary { background:var(--gradient-primary); color:var(--text-on-primary); }
+.btn-primary:hover { opacity:0.85; }
+.btn-blue { background:var(--gradient-primary); color:var(--text-on-primary); }
+.btn-blue:hover { opacity:0.85; }
+.btn-red { background:var(--gradient-danger); color:var(--text-on-primary); }
+.btn-red:hover { opacity:0.85; }
+.btn-outline { background:transparent; color:var(--text-accent); border:1px solid var(--text-accent); }
+.btn-outline:hover { background:var(--text-accent); color:var(--text-on-primary); }
+.sql-block { background:var(--bg-surface-alt); border:1px solid var(--border-light); border-radius:6px; padding:12px; margin:12px 0; font-family:monospace; font-size:13px; color:var(--text-code); white-space:pre-wrap; overflow-x:auto; max-height:200px; overflow-y:auto; }
 .query-box { display:flex; gap:10px; align-items:flex-start; }
 .query-box textarea { flex:1; min-height:60px; }
 .results { overflow-x:auto; }
 .results table { width:100%; border-collapse:collapse; font-size:13px; }
-.results th { background:#f1f3f5; color:#495057; font-weight:600; padding:8px 12px; text-align:left; border-bottom:2px solid #dee2e6; position:sticky; top:0; }
-.results td { padding:6px 12px; border-bottom:1px solid #f1f3f5; color:#212529; }
-.results tr:hover td { background:#f8f9fa; }
-.info-bar { color:#6c757d; font-size:13px; margin-top:8px; display:flex; gap:20px; }
-.analysis-box { background:#fff; border:1px solid #dc3545; border-radius:10px; padding:16px; margin-top:12px; color:#dc3545; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+.results th { background:var(--table-header-bg); color:var(--text-secondary); font-weight:600; padding:8px 12px; text-align:left; border-bottom:2px solid var(--table-header-border); position:sticky; top:0; }
+.results td { padding:6px 12px; border-bottom:1px solid var(--border-light); color:var(--text-primary); }
+.results tr:hover td { background:var(--bg-surface-alt); }
+.info-bar { color:var(--text-secondary); font-size:13px; font-weight:600; margin-top:8px; display:flex; gap:20px; }
+.analysis-box { background:var(--bg-surface); border:1px solid var(--border-error); border-radius:10px; padding:16px; margin-top:12px; color:var(--text-error); box-shadow:var(--card-shadow); }
 .analysis-box h3 { margin-top:0; font-size:14px; }
+.loading-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:12px; }
+.loading-overlay.show { display:flex; }
+.loading-overlay .loading-text { color:#fff; font-size:16px; font-weight:600; }
+.typing { display:flex; gap:4px; }
+.typing span { width:10px; height:10px; background:#00bfff; border-radius:50%; animation:typing 1s infinite; }
+.typing span:nth-child(2) { animation-delay:.2s; }
+.typing span:nth-child(3) { animation-delay:.4s; }
+@keyframes typing { 0%,100%{opacity:.2} 50%{opacity:1} }
 {% endblock %}
 
 {% block content %}
 <div class="header-row">
     <h2>Генерация SQL-запроса</h2>
-    <span style="color:#6c757d;font-size:13px;">Модель: {{ llm_model }}</span>
+    <span style="color:var(--text-muted);font-size:13px;">Модель: {{ llm_model }}</span>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="typing"><span></span><span></span><span></span></div>
+    <div class="loading-text">Модель думает над SQL-запросом...</div>
 </div>
 
 <div class="card">
-    <form method="POST">
+    <form method="POST" id="queryForm">
         <label>Вопрос на естественном языке</label>
         <div class="query-box">
-            <textarea name="question" rows="2" placeholder="Например: покажи топ-10 регионов по продажам за последний месяц">{{ question }}</textarea>
-            <button type="submit" name="action" value="ask" class="btn btn-primary" style="height:60px; min-width:140px;">Сгенерировать SQL</button>
+            <textarea name="question" id="questionInput" rows="2" placeholder="Например: покажи топ-10 регионов по продажам за последний месяц">{{ question }}</textarea>
+            <button type="submit" name="action" value="ask" class="btn btn-primary" style="height:60px; min-width:140px;" onclick="document.getElementById('loadingOverlay').classList.add('show')">Сгенерировать SQL</button>
         </div>
         {% if sql_query %}<div class="sql-block">{{ sql_query }}</div>{% endif %}
     </form>
@@ -50,40 +63,83 @@
 {% if result and result.rows is defined %}
 <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h3 style="color:#198754; margin:0; font-size:15px;">Результат</h3>
+        <h3 style="color:var(--text-success); margin:0; font-size:15px;">Результат</h3>
         <div class="btn-row">
-            <button class="btn btn-blue" onclick="openChat('{{ sql_query }}')">Чат</button>
-            <button class="btn btn-blue" onclick="openGraf('{{ sql_query }}')">График</button>
-            <button class="btn btn-blue" onclick="openTable('{{ sql_query }}')">Таблица</button>
-            <button class="btn btn-outline" onclick="generateReport()">Отчёт</button>
-            <button class="btn btn-outline" onclick="sendToRedash()">Redash</button>
-            <button class="btn btn-outline" onclick="downloadExcel()">Excel</button>
+            <button class="btn btn-blue" onclick='openChat({{ sql_query|tojson }})'>Чат</button>
+            <button class="btn btn-blue" onclick='openGraf({{ sql_query|tojson }})'>График</button>
+            <button class="btn btn-blue" onclick='openTable({{ sql_query|tojson }})'>Таблица</button>
+            <button class="btn btn-blue" onclick="generateReport()">Отчёт</button>
+            <button class="btn btn-blue" onclick="sendToRedash()">Послать в BI</button>
+            <button class="btn btn-blue" onclick="downloadExcel()">Excel</button>
         </div>
     </div>
     <div class="results"><table><thead><tr>{% for c in result.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead><tbody>{% for row in result.rows %}<tr>{% for v in row %}<td>{{ v }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
-    <div class="info-bar"><span>Строк: {{ result.rows|length }}</span>{% if elapsed_time %}<span>Время: {{ elapsed_time }}с</span>{% endif %}</div>
+    <div class="info-bar"><span>Строк: {{ result.rows|length }}</span><span>LLM: {{ model_time if model_time is not none else 0 }} сек</span><span>SQL: {{ sql_time if sql_time is not none else 0 }} сек</span></div>
 </div>
 {% elif result and result.error is defined %}
-<div class="analysis-box"><h3>Ошибка</h3><p>{{ result.error }}</p>{% if analysis %}<div style="margin-top:10px; color:#212529;">{{ analysis|safe }}</div>{% endif %}</div>
+<div class="analysis-box"><h3>Ошибка</h3><p>{{ result.error }}</p>{% if analysis %}<div style="margin-top:10px; color:var(--text-primary);">{{ analysis|safe }}</div>{% endif %}</div>
 {% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script>
-const sqlQuery = "{{ sql_query|safe }}";
-const question = "{{ question|safe }}";
+const sqlQuery = decodeURIComponent('{{ sql_query|urlencode|safe }}');
+const question = decodeURIComponent('{{ question|urlencode|safe }}');
+const resultCols = {{ (result.columns if result else [])|tojson }};
+const resultRows = {{ (result.rows if result else [])|tojson }};
+
+document.getElementById('queryForm').addEventListener('submit', function() {
+    document.getElementById('loadingOverlay').classList.add('show');
+});
+
+document.getElementById('questionInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('queryForm').submit();
+    }
+});
+
 function openChat(sql) { window.open('/chat?sql_query=' + encodeURIComponent(sql), '_blank'); }
-function openGraf(sql) { window.open('/graf?sql_query=' + encodeURIComponent(sql), '_blank'); }
+function openGraf(sql) {
+    try { localStorage.setItem('chatTableData', JSON.stringify({sql_query: sql, columns: resultCols, rows: resultRows})); } catch(e) {}
+    window.open('/graf?sql_query=' + encodeURIComponent(sql), '_blank');
+}
 function openTable(sql) {
-    const cols = [{% for c in (result.columns if result else []) %}"{{ c }}"{% if not loop.last %},{% endif %}{% endfor %}];
-    const rows = [{% for row in (result.rows if result else []) %}[{% for v in row %}"{{ v }}"{% if not loop.last %},{% endif %}{% endfor %}]{% if not loop.last %},{% endif %}{% endfor %}];
-    localStorage.setItem('chatTableData', JSON.stringify({sql_query: sql, columns: cols, rows: rows}));
+    localStorage.setItem('chatTableData', JSON.stringify({sql_query: sql, columns: resultCols, rows: resultRows}));
     window.open('/table', '_blank');
 }
 async function generateReport() {
     const btn = event.target; btn.textContent='...'; btn.disabled=true;
     try {
-        const r = await fetch('/generate_report', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sql_query: sqlQuery, question: question, include_charts: true})});
+        const promResp = await fetch('/api/prompt_reports');
+        const prompts = await promResp.json();
+        const active = prompts.filter(p => p.is_active);
+        let promptId = null;
+        if (active.length === 1) { promptId = active[0].id; }
+        else if (active.length > 1) {
+            promptId = await new Promise(resolve => {
+                let overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+                let box = document.createElement('div');
+                box.style.cssText = 'background:#2a2a2a;border-radius:12px;padding:24px;max-width:420px;width:90%;box-shadow:0 4px 24px rgba(0,0,0,0.4);color:#f5f5f5;';
+                box.innerHTML = '<h3 style="color:#00bfff;margin:0 0 12px;">Выберите промпт для отчёта</h3>';
+                active.forEach(p => {
+                    let b = document.createElement('button');
+                    b.style.cssText = 'display:block;width:100%;padding:10px;margin:4px 0;border:1px solid #444;border-radius:8px;background:#333;color:#f5f5f5;cursor:pointer;text-align:left;font-size:13px;';
+                    b.textContent = p.name + (p.is_default ? ' ★' : '');
+                    b.onclick = () => { overlay.remove(); resolve(p.id); };
+                    box.appendChild(b);
+                });
+                let skip = document.createElement('button');
+                skip.style.cssText = 'display:block;width:100%;padding:8px;margin-top:8px;border:1px solid #444;border-radius:8px;background:transparent;color:#aaa;cursor:pointer;font-size:12px;';
+                skip.textContent = 'Без промпта (стандартный)';
+                skip.onclick = () => { overlay.remove(); resolve(null); };
+                box.appendChild(skip);
+                overlay.appendChild(box);
+                document.body.appendChild(overlay);
+            });
+        }
+        const r = await fetch('/generate_report', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sql_query: sqlQuery, question: question, include_charts: true, prompt_id: promptId})});
         const d = await r.json();
         if (d.status==='ok') window.open('/download_file/'+d.filename);
         else alert(d.message);
@@ -95,17 +151,15 @@ async function sendToRedash() {
     try {
         const r = await fetch('/send_to_redash', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question: question||'Query', sql_query: sqlQuery})});
         const d = await r.json();
-        alert(d.status==='ok' ? 'Отправлено в Redash' : d.message||'Ошибка');
+        alert(d.status==='ok' ? 'Отправлено в BI' : d.message||'Ошибка');
     } catch(e) { alert(e); }
-    btn.textContent='Redash'; btn.disabled=false;
+    btn.textContent='Послать в BI'; btn.disabled=false;
 }
 function downloadExcel() {
-    const cols = [{% for c in (result.columns if result else []) %}"{{ c }}"{% if not loop.last %},{% endif %}{% endfor %}];
-    const rows = [{% for row in (result.rows if result else []) %}[{% for v in row %}"{{ v }}"{% if not loop.last %},{% endif %}{% endfor %}]{% if not loop.last %},{% endif %}{% endfor %}];
-    if (!cols.length) return alert('Нет данных');
+    if (!resultCols.length) return alert('Нет данных');
     const wb = XLSX.utils.book_new();
     wb.SheetNames.push('Data');
-    wb.Sheets.Data = XLSX.utils.aoa_to_sheet([cols, ...rows]);
+    wb.Sheets.Data = XLSX.utils.aoa_to_sheet([resultCols, ...resultRows]);
     XLSX.writeFile(wb, 'query.xlsx');
 }
 </script>

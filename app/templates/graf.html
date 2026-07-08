@@ -1,34 +1,329 @@
-{% extends "base.html" %}
-{% block title %}График{% endblock %}
-{% block extra_css %}
-.chart-container { background:#fff; border:none; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
-.card { background:#fff; border:none; border-radius:10px; padding:16px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
-.btn { padding:8px 18px; border-radius:6px; border:none; font-size:13px; cursor:pointer; font-weight:500; }
-.btn-primary { background:#0d6efd; color:#fff; }
-.btn-primary:hover { background:#0b5ed7; }
-{% endblock %}
-
-{% block content %}
-<h2 style="color:#1a1e2e;">Построение графика</h2>
-<div class="card">
-    <label style="color:#495057;font-size:12px;text-transform:uppercase;margin-bottom:8px;display:block;font-weight:500;">SQL-запрос</label>
-    <div style="display:flex;gap:8px;">
-        <textarea id="sqlInput" style="flex:1;background:#fff;border:1px solid #ced4da;border-radius:6px;color:#212529;padding:10px;font-family:monospace;font-size:14px;resize:vertical;" rows="3">{{ sql_query }}</textarea>
-        <button class="btn btn-primary" onclick="loadChart()" style="height:80px;min-width:100px;">Построить</button>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Графики</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body { margin:0; padding:0; background:var(--bg-body); color:var(--text-primary); font-family:Arial,sans-serif; transition:background-color 0.3s ease; }
+        .graf-page { padding: 20px 30px; }
+        .graf-page h2 { color: var(--text-accent); margin: 0 0 16px; }
+        .graf-layout { display:flex; gap:20px; max-width:1500px; margin:0 auto; align-items:flex-start; }
+        .graf-main { flex:1; min-width:0; }
+        #plotlyChart { width:100%; min-height:520px; background:#ffffff; border:1px solid var(--border-default); border-radius:12px; padding:10px; }
+        .graf-sidebar { width:280px; flex-shrink:0; background:var(--bg-surface); border:1px solid var(--border-default); border-radius:12px; padding:18px; position:sticky; top:20px; box-shadow:var(--shadow-block); }
+        .graf-sidebar h3 { color:var(--text-accent); margin:0 0 16px 0; font-size:15px; display:flex; align-items:center; gap:6px; }
+        .graf-sidebar .setting-group { margin-bottom:14px; }
+        .graf-sidebar label { display:block; font-size:11px; color:var(--text-secondary); margin-bottom:5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+        .graf-sidebar select { width:100%; padding:8px 10px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-input); border-radius:8px; font-size:13px; cursor:pointer; outline:none; transition:border-color 0.2s; appearance:auto; }
+        .graf-sidebar select:hover { border-color:var(--text-accent); }
+        .graf-sidebar select:focus { border-color:var(--border-input-focus); box-shadow:0 0 0 2px rgba(0,191,255,0.15); }
+        .graf-sidebar select option { background:var(--bg-surface); color:var(--text-primary); }
+        .graf-sidebar .build-btn { width:100%; margin-top:10px; padding:11px; background:var(--gradient-primary); color:white; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.2s; box-shadow:var(--shadow-btn); }
+        .graf-sidebar .build-btn:hover { opacity:0.92; transform:translateY(-1px); box-shadow:var(--shadow-btn-hover); }
+        .graf-sidebar .build-btn:active { transform:scale(0.97); }
+        .graf-sidebar .reset-btn { width:100%; margin-top:6px; padding:8px; background:transparent; color:var(--text-secondary); border:1px solid var(--border-light); border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+        .graf-sidebar .reset-btn:hover { color:var(--text-primary); border-color:var(--text-secondary); }
+        .graf-sidebar .data-info { margin-top:14px; padding-top:12px; border-top:1px solid var(--border-light); font-size:11px; color:var(--text-secondary); line-height:1.6; }
+        .graf-sidebar .data-info strong { color:var(--text-accent); }
+        .chart-toolbar { display:flex; justify-content:center; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center; }
+        .chart-toolbar .hide-on-table-mode { display:inline-flex; }
+        .chart-toolbar.table-mode .hide-on-table-mode { display:none; }
+        .chart-toolbar.hidden { display:none; }
+        .chart-toolbar button { min-width:100px; padding:10px 20px; font-size:15px; font-weight:600; border:none; border-radius:8px; cursor:pointer; transition:opacity 0.2s; display:inline-flex; align-items:center; justify-content:center; gap:6px; margin:0; line-height:1.4; height:44px; box-sizing:border-box; }
+        .chart-toolbar button:disabled { opacity:0.5; cursor:not-allowed; }
+        .btn-html { background:var(--gradient-html); color:#fff; }
+        .btn-html:hover:not(:disabled) { opacity:0.9; }
+        .btn-jpg { background:var(--gradient-jpg); color:#fff; }
+        .btn-jpg:hover:not(:disabled) { opacity:0.9; }
+        .btn-green { background:var(--gradient-success); color:#fff; }
+        .btn-green:hover:not(:disabled) { opacity:0.9; }
+        .copy-chart-btn { background:var(--gradient-primary); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer; transition:all 0.2s ease; display:inline-flex; align-items:center; gap:6px; box-shadow:var(--shadow-btn); margin:0; line-height:1.4; height:44px; box-sizing:border-box; }
+        .copy-chart-btn:hover:not(:disabled) { opacity:0.92; transform:translateY(-2px); box-shadow:var(--shadow-btn-hover); }
+        .copy-chart-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+        .copy-chart-btn.copied { background:var(--gradient-success); }
+        .error-message { color:var(--text-error); text-align:center; padding:20px; font-size:16px; }
+        .success-message { color:var(--text-success); text-align:center; padding:10px; }
+        .empty-chart-msg { text-align:center; padding:60px 20px; color:var(--text-secondary); font-size:15px; }
+        @media (max-width:900px) { .graf-layout { flex-direction:column-reverse; } .graf-sidebar { width:100%; position:static; } }
+    </style>
+</head>
+<body class="graf-page">
+    <h2>📊 Графики</h2>
+    <input type="hidden" id="sqlQueryHidden" value="{{ sql_query }}">
+    <input type="hidden" id="tableMode" value="{{ '1' if table_mode else '0' }}">
+    <div id="statusMessage" style="display:none;"></div>
+    <div class="chart-toolbar">
+        <button class="btn-html hide-on-table-mode" onclick="exportChart('html')" type="button">🌐 HTML</button>
+        <button class="btn-jpg hide-on-table-mode" onclick="exportChart('jpg')" type="button">🖼 JPG</button>
+        <button class="btn-green hide-on-table-mode" onclick="generateReportWithCharts()" type="button">📄 Отчёт</button>
+        <button class="copy-chart-btn" id="copyChartBtn" onclick="copyChartToClipboard()" type="button">📋 Copy</button>
     </div>
-</div>
-<div id="chartArea" class="chart-container">Введите SQL-запрос и нажмите "Построить"</div>
-{% endblock %}
+    <div class="graf-layout">
+        <div class="graf-main"><div id="plotlyChart"><div class="empty-chart-msg">⏳ Загрузка данных...</div></div></div>
+        <div class="graf-sidebar">
+            <h3>⚙️ Настройки графика</h3>
+            <div class="setting-group">
+                <label for="chartType">Тип графика</label>
+                <select id="chartType">
+                    <option value="bar">📊 Гистограмма (Bar)</option>
+                    <option value="pie">🥧 Круговая (Pie)</option>
+                    <option value="line">📈 Линейный (Line)</option>
+                    <option value="area">▤ С областями (Area)</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label for="axisX">Ось X <span id="axisXHint"></span></label>
+                <select id="axisX"></select>
+            </div>
+            <div class="setting-group">
+                <label for="axisY">Ось Y <span id="axisYHint"></span></label>
+                <select id="axisY"></select>
+            </div>
+            <div class="setting-group">
+                <label for="colorScheme">Цвет</label>
+                <select id="colorScheme">
+                    <option value="default">🎨 Стандартный</option>
+                    <option value="blue">🔵 Синий</option>
+                    <option value="red">🔴 Красный</option>
+                    <option value="green">🟢 Зелёный</option>
+                    <option value="orange">🟠 Оранжевый</option>
+                    <option value="purple">🟣 Фиолетовый</option>
+                    <option value="warm">🌅 Тёплый</option>
+                    <option value="cool">🌊 Холодный</option>
+                    <option value="pastel">🎀 Пастельный</option>
+                    <option value="contrast">⚡ Контрастный</option>
+                    <option value="gray">⬜ Серый</option>
+                    <option value="teal">🦆 Бирюзовый</option>
+                    <option value="indigo">💙 Индиго</option>
+                    <option value="pink">🌸 Розовый</option>
+                    <option value="coral">🪸 Коралловый</option>
+                    <option value="midnight">🌙 Полночный</option>
+                </select>
+            </div>
+            <button class="build-btn" id="buildBtn" onclick="buildChart()">📊 Построить график</button>
+            <button class="reset-btn" onclick="resetSettings()">↺ Сбросить настройки</button>
+            <div class="data-info" id="dataInfo"></div>
+        </div>
+    </div>
+    <script>
+        (function() { var t=localStorage.getItem('app-theme')||'dark'; document.documentElement.setAttribute('data-theme',t); })();
+        const chartData = { columns: {{ columns|tojson }}, rows: {{ rows|tojson }} };
+        const tableMode = document.getElementById('tableMode').value === '1';
 
-{% block scripts %}
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-<script>
-{% if sql_query %}loadChart();{% endif %}
-async function loadChart() {
-    const sql = document.getElementById('sqlInput').value.trim(); if (!sql) return alert('Введите SQL-запрос');
-    const area = document.getElementById('chartArea'); area.innerHTML = '<p style="color:#6c757d;">Загрузка...</p>';
-    try { const r = await fetch('/generate_chart', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sql_query: sql})}); const d = await r.json(); if (d.status==='ok') area.innerHTML = d.chart_body; else area.innerHTML = '<p style="color:#dc3545;">Ошибка: '+d.message+'</p>'; }
-    catch(e) { area.innerHTML = '<p style="color:#dc3545;">Ошибка: '+e+'</p>'; }
-}
-</script>
-{% endblock %}
+        function loadTableData() {
+            if (chartData.columns.length > 0 && chartData.rows.length > 0) return;
+            try {
+                const stored = localStorage.getItem('chatTableData');
+                if (!stored) return;
+                const data = JSON.parse(stored);
+                chartData.columns = data.columns || [];
+                chartData.rows = data.rows || [];
+            } catch (err) { console.error('Ошибка загрузки:', err); }
+        }
+
+        const colorSchemes = {
+            default: ['#636EFA','#EF553B','#00CC96','#AB63FA','#FFA15A','#19D3F3','#FF6692','#B6E880','#FF97FF','#FECB52'],
+            blue: ['#0066ff','#00bfff','#2196F3','#03A9F4','#0288D1','#01579B','#4FC3F7','#29B6F6','#0091EA','#00B0FF'],
+            red: ['#d62728','#ff4444','#ff6666','#e53935','#c62828','#b71c1c','#ef5350','#f44336','#FF1744','#D50000'],
+            green: ['#2ca02c','#4CAF50','#00aa55','#66BB6A','#388E3C','#1B5E20','#81C784','#43A047','#00C853','#00E676'],
+            orange: ['#ff7f0e','#FF9800','#FFA726','#FB8C00','#E65100','#FF6D00','#FFB74D','#FFA000','#FF8F00','#F57C00'],
+            purple: ['#9467bd','#9C27B0','#AB47BC','#7B1FA2','#6A1B9A','#4A148C','#CE93D8','#8E24AA','#AA00FF','#D500F9'],
+            warm: ['#ff4444','#ff7f0e','#ffa500','#ffcc00','#ff6666','#ff9933','#ffcc66','#ff5555','#FF8A65','#FFAB40'],
+            cool: ['#0066ff','#00bfff','#00aa55','#2ca02c','#1f77b4','#0099cc','#33ccff','#006699','#26C6DA','#0097A7'],
+            pastel: ['#FFB3BA','#BAFFC9','#BAE1FF','#FFFFBA','#E8BAFF','#FFD9BA','#BAFFF5','#FFC9DE','#C9FFE5','#D4C5F9'],
+            contrast: ['#333333','#FF0000','#0000FF','#00FF00','#FF00FF','#FFFF00','#00FFFF','#FF8800','#8800FF','#0088FF'],
+            gray: ['#757575','#9E9E9E','#BDBDBD','#616161','#424242','#8D8D8D','#A5A5A5','#585858','#C7C7C7','#6E6E6E'],
+            teal: ['#B2DFDB','#80CBC4','#4DB6AC','#26A69A','#009688','#00897B','#00796B','#00695C','#004D40','#1DE9B6'],
+            indigo: ['#C5CAE9','#9FA8DA','#7986CB','#5C6BC0','#3F51B5','#3949AB','#303F9F','#283593','#1A237E','#536DFE'],
+            pink: ['#F8BBD0','#F48FB1','#F06292','#EC407A','#E91E63','#D81B60','#C2185B','#AD1457','#880E4F','#FF4081'],
+            coral: ['#FBE9E7','#FFCCBC','#FFAB91','#FF8A80','#FF6E40','#FF5252','#FF1744','#D50000','#B71C1C','#FF9E80'],
+            midnight: ['#1A237E','#283593','#303F9F','#3949AB','#3F51B5','#5C6BC0','#7986CB','#9FA8DA','#C5CAE9','#E8EAF6']
+        };
+
+        function init() {
+            loadTableData();
+            populateColumnSelects();
+            updateDataInfo();
+            if (chartData.columns.length > 0 && chartData.rows.length > 0) { buildChart(); }
+            else { document.getElementById('plotlyChart').innerHTML = '<div class="empty-chart-msg">Нет данных. Выполните SQL-запрос на главной странице.</div>'; }
+            document.getElementById('chartType').addEventListener('change', function() { updateAxisHints(); buildChart(); });
+            document.getElementById('axisX').addEventListener('change', buildChart);
+            document.getElementById('axisY').addEventListener('change', buildChart);
+            document.getElementById('colorScheme').addEventListener('change', buildChart);
+            if (tableMode) { var t = document.querySelector('.chart-toolbar'); if (t) t.classList.add('table-mode'); }
+            updateAxisHints();
+        }
+
+        function populateColumnSelects() {
+            const ax = document.getElementById('axisX'), ay = document.getElementById('axisY');
+            ax.innerHTML = ''; ay.innerHTML = '';
+            chartData.columns.forEach(function(col, idx) {
+                ax.appendChild(new Option(col, idx));
+                ay.appendChild(new Option(col, idx));
+            });
+            if (chartData.columns.length > 1) ay.value = 1;
+        }
+
+        function updateAxisHints() {
+            var t = document.getElementById('chartType').value;
+            document.getElementById('axisXHint').textContent = t === 'pie' ? '(метки)' : '';
+            document.getElementById('axisYHint').textContent = t === 'pie' ? '(значения)' : '';
+        }
+
+        function updateDataInfo() {
+            var info = document.getElementById('dataInfo');
+            if (!chartData.columns.length) { info.innerHTML = 'Нет данных'; return; }
+            info.innerHTML = '📋 Колонок: <strong>' + chartData.columns.length + '</strong><br>📊 Строк: <strong>' + chartData.rows.length + '</strong><br>📌 ' + chartData.columns.map(function(c) { return '<em>' + c + '</em>'; }).join(', ');
+        }
+
+        function resetSettings() {
+            document.getElementById('chartType').value = 'bar';
+            document.getElementById('colorScheme').value = 'default';
+            if (chartData.columns.length > 0) { document.getElementById('axisX').value = 0; if (chartData.columns.length > 1) document.getElementById('axisY').value = 1; }
+            updateAxisHints(); buildChart();
+        }
+
+        function buildChart() {
+            var plotDiv = document.getElementById('plotlyChart');
+            plotDiv.innerHTML = '';
+            if (!chartData.columns.length || !chartData.rows.length) { plotDiv.innerHTML = '<div class="empty-chart-msg">Нет данных для построения графика</div>'; return; }
+            var chartType = document.getElementById('chartType').value;
+            var xIdx = parseInt(document.getElementById('axisX').value) || 0;
+            var yIdx = parseInt(document.getElementById('axisY').value) || 0;
+            var scheme = document.getElementById('colorScheme').value;
+            var colors = colorSchemes[scheme] || colorSchemes.default;
+            var mainColor = colors[0];
+            var xLabel = chartData.columns[xIdx] || '', yLabel = chartData.columns[yIdx] || '';
+            var xData = chartData.rows.map(function(row) { return row[xIdx]; });
+            var yData = chartData.rows.map(function(row) { var val = row[yIdx]; if (val === null || val === undefined) return null; var num = Number(val); return isNaN(num) ? val : num; });
+            var traces = [];
+            var layout = {
+                paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff',
+                font: { color: '#000000', family: 'Arial, sans-serif', size: 12 },
+                margin: { t: 50, r: 30, b: 80, l: 70 },
+                xaxis: { title: { text: xLabel, font: { size: 13, color: '#000000' } }, gridcolor: '#cccccc', zerolinecolor: '#aaaaaa', tickangle: -30, color: '#000000' },
+                yaxis: { title: { text: yLabel, font: { size: 13, color: '#000000' } }, gridcolor: '#cccccc', zerolinecolor: '#aaaaaa', color: '#000000' },
+                showlegend: false,
+                title: { text: yLabel + ' / ' + xLabel, font: { size: 16, color: '#000000' }, x: 0.5 },
+                hovermode: 'closest', bargap: 0.15
+            };
+            var config = { responsive: true, displayModeBar: true, modeBarButtonsToRemove: ['sendDataToCloud','toImage2'], displaylogo: false };
+            if (chartType === 'bar') {
+                traces = [{ x: xData, y: yData, type: 'bar', marker: { color: mainColor, line: { width: 0 } }, hovertemplate: '<b>' + xLabel + ':</b> %{x}<br><b>' + yLabel + ':</b> %{y}<extra></extra>' }];
+            } else if (chartType === 'pie') {
+                traces = [{ labels: xData, values: yData, type: 'pie', marker: { colors: colors }, textinfo: 'label+percent', textfont: { size: 12, color: '#000000' }, hole: 0.35, hovertemplate: '<b>%{label}</b><br>Значение: %{value}<br>Доля: %{percent}<extra></extra>' }];
+                layout.xaxis = { visible: false }; layout.yaxis = { visible: false }; layout.showlegend = true;
+                layout.legend = { font: { color: '#000000', size: 11 } }; layout.title.text = xLabel + ' — распределение';
+            } else if (chartType === 'line') {
+                traces = [{ x: xData, y: yData, type: 'scatter', mode: 'lines+markers', line: { color: mainColor, width: 2.5, shape: 'spline' }, marker: { color: mainColor, size: 7, line: { color: '#ffffff', width: 1 } }, hovertemplate: '<b>' + xLabel + ':</b> %{x}<br><b>' + yLabel + ':</b> %{y}<extra></extra>' }];
+            } else if (chartType === 'area') {
+                traces = [{ x: xData, y: yData, type: 'scatter', mode: 'lines', fill: 'tozeroy', line: { color: mainColor, width: 2 }, fillcolor: mainColor + '30', hovertemplate: '<b>' + xLabel + ':</b> %{x}<br><b>' + yLabel + ':</b> %{y}<extra></extra>' }];
+            }
+            Plotly.newPlot('plotlyChart', traces, layout, config);
+        }
+
+        function showStatus(message, isError) {
+            var el = document.getElementById('statusMessage');
+            el.innerHTML = message; el.style.display = 'block';
+            el.className = isError ? 'error-message' : 'success-message';
+            if (!isError) setTimeout(function() { el.style.display = 'none'; }, 8000);
+        }
+
+        async function copyChartToClipboard() {
+            var plotDiv = document.getElementById('plotlyChart'), btn = document.getElementById('copyChartBtn');
+            if (!plotDiv || !plotDiv.data || !plotDiv.data.length) { showStatus('Нет графика для копирования', true); return; }
+            btn.disabled = true; var orig = btn.textContent; btn.textContent = '⏳ Copy...';
+            try {
+                var dataUrl = await Plotly.toImage(plotDiv, { format: 'png', width: 1400, height: 900, scale: 2 });
+                var blob = await fetch(dataUrl).then(r => r.blob());
+                if (navigator.clipboard && navigator.clipboard.write) {
+                    await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+                    showStatus('✅ График скопирован! Вставьте (Ctrl+V)'); btn.textContent = '✅ Copied!'; btn.classList.add('copied');
+                    setTimeout(function() { btn.textContent = orig; btn.classList.remove('copied'); }, 2500);
+                } else { showStatus('Clipboard API не поддерживается', true); }
+            } catch (err) { showStatus('❌ ' + err.message, true); }
+            btn.disabled = false;
+        }
+
+        function exportChart(format) {
+            var btns = document.querySelectorAll('.chart-toolbar button'); btns.forEach(function(b) { b.disabled = true; });
+            if (format === 'jpg') {
+                showStatus('⏳ Формирую JPG...');
+                Plotly.toImage('plotlyChart', { format: 'jpeg', width: 1400, height: 900, scale: 2 }).then(function(u) {
+                    var a = document.createElement('a'); a.href = u; a.download = 'chart.jpg'; document.body.appendChild(a); a.click(); document.body.removeChild(a); showStatus('✅ JPG скачан');
+                }).catch(function() { serverExport('jpg'); });
+            } else if (format === 'html') {
+                showStatus('⏳ Формирую HTML...');
+                try {
+                    var pd = document.getElementById('plotlyChart');
+                    var h = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8"><title>Chart</title>\n<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"><\/script>\n</head>\n<body style="background:#fff"><div id="chart"></div>\n<script>Plotly.newPlot("chart",' + JSON.stringify(pd.data) + ',' + JSON.stringify(pd.layout) + ',{responsive:true});<\/script>\n</body>\n</html>';
+                    var b = new Blob([h], { type: 'text/html;charset=utf-8' });
+                    var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'chart.html'; document.body.appendChild(a); a.click(); document.body.removeChild(a); showStatus('✅ HTML скачан');
+                } catch(err) { serverExport('html'); }
+            }
+            setTimeout(function() { btns.forEach(function(b) { b.disabled = false; }); }, 2000);
+        }
+
+        function serverExport(format) {
+            var sql = document.getElementById('sqlQueryHidden').value;
+            if (!sql) { showStatus('❌ SQL-запрос не найден', true); return; }
+            window.open('/export_chart/' + format + '?sql_query=' + encodeURIComponent(sql), '_blank');
+            showStatus('✅ Экспорт запущен (серверный)');
+        }
+
+        function generateReportWithCharts() {
+            var sql = document.getElementById('sqlQueryHidden').value;
+            if (!sql) { showStatus('❌ SQL-запрос не найден', true); return; }
+            fetchReportPrompts(function(promptId) {
+                var scheme = document.getElementById('colorScheme').value;
+                var colors = colorSchemes[scheme] || colorSchemes.default;
+                var btn = document.querySelector('.btn-green'), orig = btn.textContent;
+                btn.disabled = true; btn.textContent = '⏳ Формирую...'; showStatus('⏳ Формирую отчёт...');
+                fetch('/generate_report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sql_query: sql, question: '', include_charts: true, chart_color: colors[0], prompt_id: promptId }) })
+                .then(function(r) { return r.json(); })
+                .then(function(res) { if (res.status === 'ok') { showStatus('✅ Файл ' + res.filename + ' сформирован!'); window.open('/download_file/' + encodeURIComponent(res.filename), '_blank'); } else showStatus('❌ ' + (res.message || 'Ошибка'), true); })
+                .catch(function(err) { showStatus('❌ ' + err.message, true); })
+                .finally(function() { btn.disabled = false; btn.textContent = orig; });
+            });
+        }
+
+        function fetchReportPrompts(callback) {
+            fetch('/api/prompt_reports')
+            .then(function(r) { return r.json(); })
+            .then(function(prompts) {
+                var active = prompts.filter(function(p) { return p.is_active; });
+                if (!active.length) { callback(null); return; }
+                if (active.length === 1) { callback(active[0].id); return; }
+                showPromptModal(active, callback);
+            })
+            .catch(function() { callback(null); });
+        }
+
+        function showPromptModal(prompts, callback) {
+            var overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+            var box = document.createElement('div');
+            box.style.cssText = 'background:#2a2a2a;border-radius:12px;padding:24px;max-width:420px;width:90%;box-shadow:0 4px 24px rgba(0,0,0,0.4);color:#f5f5f5;';
+            box.innerHTML = '<h3 style="color:#00bfff;margin:0 0 12px;">Выберите промпт для отчёта</h3>';
+            prompts.forEach(function(p) {
+                var btn = document.createElement('button');
+                btn.style.cssText = 'display:block;width:100%;padding:10px;margin:4px 0;border:1px solid #444;border-radius:8px;background:#333;color:#f5f5f5;cursor:pointer;text-align:left;font-size:13px;';
+                btn.textContent = p.name + (p.is_default ? ' ★' : '');
+                btn.onclick = function() { overlay.remove(); callback(p.id); };
+                box.appendChild(btn);
+            });
+            var skip = document.createElement('button');
+            skip.style.cssText = 'display:block;width:100%;padding:8px;margin-top:8px;border:1px solid #444;border-radius:8px;background:transparent;color:#aaa;cursor:pointer;font-size:12px;';
+            skip.textContent = 'Без промпта (стандартный)';
+            skip.onclick = function() { overlay.remove(); callback(null); };
+            box.appendChild(skip);
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
+        }
+
+        init();
+    </script>
+</body>
+</html>

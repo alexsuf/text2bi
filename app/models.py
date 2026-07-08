@@ -13,6 +13,7 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
+    theme = Column(String(20), default="dark")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -46,14 +47,10 @@ class Prompt(Base):
     __table_args__ = {"schema": "app"}
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=True)
     name = Column(String(255), nullable=False)
     prompt_key = Column(String(255), unique=True, nullable=False)
     category = Column(String(100), nullable=False, default="general")
     content = Column(Text, nullable=False)
-    is_active = Column(Boolean, default=True)
-    is_default = Column(Boolean, default=False)
-    usage_count = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -68,6 +65,20 @@ class SavedQuery(Base):
     query_text = Column(Text, nullable=False)
     connection_id = Column(Integer, ForeignKey("app.connection_settings.id", ondelete="CASCADE"), nullable=True)
     result_columns = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class PromptReport(Base):
+    __tablename__ = "prompt_report"
+    __table_args__ = {"schema": "app"}
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False)
+    name = Column(String(255), nullable=False)
+    content = Column(Text, nullable=False)
+    is_active = Column(Boolean, default=True)
+    is_default = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

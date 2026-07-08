@@ -10,4 +10,4 @@ class Config:
     LLM_API_KEY = ""
     
     SECRET_KEY = "your-secret-key-change-in-production"
-    DOWNLOADS_DIR = "./downloads"
+    DOWNLOADS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "downloads")

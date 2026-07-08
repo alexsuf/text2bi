@@ -10,9 +10,9 @@
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <strong class="text-primary">{{ p.prompt_key }}</strong>
-            <span class="text-muted small">{{ p.name }} | {{ p.category }}{% if p.is_active %} <span class="badge bg-success">активен</span>{% endif %}</span>
+            <span class="text-muted small">{{ p.name }} | {{ p.category }}</span>
         </div>
-        <pre class="bg-light p-3 rounded mb-0" style="max-height:200px; overflow:auto; font-size:13px; color:#055160;">{{ p.content[:300] }}{% if p.content|length>300 %}...{% endif %}</pre>
+        <pre style="background:var(--bg-pre); color:var(--text-code); max-height:200px; overflow:auto; font-size:13px; border-radius:6px; padding:12px; margin:0;">{{ p.content[:300] }}{% if p.content|length>300 %}...{% endif %}</pre>
     </div>
 </div>
 {% endfor %}

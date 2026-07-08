@@ -5,52 +5,39 @@
     <title>Text2BI — {% block title %}Главная{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=5">
     <style>
-        body { background-color: #f8f9fa; }
-        .sidebar {
-            min-height: 100vh;
-            background: linear-gradient(180deg, #1a1e2e 0%, #2d3250 100%);
-            color: white;
-            padding-top: 20px;
-        }
-        .sidebar .nav-link {
-            color: #adb5bd;
-            padding: 12px 20px;
-            border-radius: 8px;
-            margin: 2px 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active {
-            background-color: rgba(255,255,255,0.1);
-            color: white;
-        }
-        .sidebar .brand {
-            padding: 0 20px 20px;
-            font-size: 1.25rem;
-            font-weight: 600;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            margin-bottom: 10px;
-        }
-        .card { border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; }
-        .card-header { background-color: white; border-bottom: 1px solid #eee; font-weight: 600; }
-        .table thead th { background-color: #f1f3f5; border-bottom: 2px solid #dee2e6; }
         {% block extra_css %}{% endblock %}
     </style>
     {% block head %}{% endblock %}
 </head>
 <body>
-    <div class="container-fluid">
+    <!-- TOP BAR — full width, sidebar-bg color -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <i class="bi bi-bar-chart-fill"></i> Text2BI
+            {% if user %}<span class="top-bar-user">{{ user.username }}</span>{% endif %}
+        </div>
+        <div class="top-bar-right">
+            <span class="model-name">Модель: {{ default_model_name }}</span>
+            <div class="theme-selector">
+                <label for="themeSelect">Тема:</label>
+                <select id="themeSelect">
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                    <option value="nord">Nord</option>
+                    <option value="solarized">Solarized</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid" style="margin-top:52px;">
         <div class="row">
             <nav class="col-md-2 d-none d-md-block sidebar" style="max-width:200px;">
-                <div class="brand">
-                    <i class="bi bi-bar-chart-fill"></i> Text2BI{% if user %} <small style="opacity:0.6">{{ user.username }}</small>{% endif %}
-                </div>
-                <nav class="nav flex-column">
+                <nav class="nav flex-column" style="margin-top:10px;">
                     {% for item in menu %}
-                    <a class="nav-link {% if request.path == item.href or (item.href != '/' and request.path.startswith(item.href)) %}active{% endif %}" href="{{ item.href }}">
+                    <a class="nav-link {% if request.path == item.href or (item.href != '/' and request.path.startswith(item.href)) %}active{% endif %}" href="{{ item.href }}" {% if item.href == '/graf' %}id="sidebarGrafLink"{% endif %}>
                         <i class="bi {{ item.icon }}"></i> {{ item.label }}
                     </a>
                     {% endfor %}
@@ -79,6 +66,39 @@
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function() {
+            const themeSelect = document.getElementById('themeSelect');
+            function setTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('app-theme', theme);
+            }
+            const saved = localStorage.getItem('app-theme') || '{{ user_theme }}';
+            setTheme(saved);
+            if (themeSelect) {
+                themeSelect.value = saved;
+                themeSelect.addEventListener('change', function() {
+                    setTheme(this.value);
+                });
+            }
+            const grafLink = document.getElementById('sidebarGrafLink');
+        if (grafLink) {
+            grafLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (typeof sqlQuery !== 'undefined' && sqlQuery) {
+                    try {
+                        const cols = typeof resultCols !== 'undefined' ? resultCols : [];
+                        const rowData = typeof resultRows !== 'undefined' ? resultRows : [];
+                        localStorage.setItem('chatTableData', JSON.stringify({sql_query: sqlQuery, columns: cols, rows: rowData}));
+                    } catch(ex) {}
+                    window.open('/graf?sql_query=' + encodeURIComponent(sqlQuery), '_blank');
+                } else {
+                    window.open('/graf', '_blank');
+                }
+            });
+        }
+    })();
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

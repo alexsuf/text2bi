@@ -1,35 +1,33 @@
 {% extends "base.html" %}
 {% block title %}Таблица{% endblock %}
 {% block extra_css %}
-.toolbar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
-.btn { padding:8px 16px; border-radius:6px; border:none; font-size:13px; cursor:pointer; font-weight:500; transition:.15s; }
-.btn-red { background:#dc3545; color:#fff; }
-.btn-red:hover { background:#bb2d3b; }
-.btn-outline { background:transparent; color:#0d6efd; border:1px solid #0d6efd; }
-.btn-outline:hover { background:#0d6efd; color:#fff; }
-.table-wrap { overflow:auto; max-height:calc(100vh - 240px); background:#fff; border:none; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+.toolbar { display:flex; gap:8px; margin-bottom:12px; align-items:center; white-space:nowrap; flex-wrap:nowrap; }
+.btn { padding:8px 16px; border-radius:6px; border:none; font-size:13px; cursor:pointer; font-weight:500; transition:.15s; white-space:nowrap; flex-shrink:0; }
+.btn-blue { background:var(--gradient-primary); color:var(--text-on-primary); }
+.btn-blue:hover { opacity:0.85; }
+.table-wrap { overflow:auto; max-height:calc(100vh - 240px); background:var(--card-bg); border:none; border-radius:10px; box-shadow:var(--card-shadow); transition:background-color 0.3s ease; }
 .table-wrap table { border-collapse:collapse; font-size:13px; width:100%; }
-.table-wrap th { background:#f1f3f5; color:#495057; font-weight:600; padding:8px 12px; border-bottom:2px solid #dee2e6; position:sticky; top:0; z-index:1; cursor:pointer; }
-.table-wrap th:hover { background:#e9ecef; }
-.table-wrap td { padding:6px 12px; border-bottom:1px solid #f1f3f5; color:#212529; }
-.table-wrap tr:hover td { background:#f8f9fa; }
-.table-wrap td[contenteditable="true"]:focus { background:#cfe2ff; outline:none; }
+.table-wrap th { background:var(--table-header-bg); color:var(--text-secondary); font-weight:600; padding:8px 12px; border-bottom:2px solid var(--table-header-border); position:sticky; top:0; z-index:1; cursor:pointer; }
+.table-wrap th:hover { background:var(--bg-surface-alt); }
+.table-wrap td { padding:6px 12px; border-bottom:1px solid var(--border-light); color:var(--text-primary); }
+.table-wrap tr:hover td { background:var(--bg-surface-alt); }
+.table-wrap td[contenteditable="true"]:focus { background:var(--bg-input); outline:2px solid var(--text-accent); }
 {% endblock %}
 
 {% block content %}
-<h2 style="color:#1a1e2e; margin-bottom:12px;">Работа с таблицей</h2>
+<h2 style="color:var(--text-accent); margin-bottom:12px;">Работа с таблицей</h2>
 <div class="toolbar">
-    <button class="btn btn-outline" onclick="addRow()">+ Строка</button>
-    <button class="btn btn-outline" onclick="addCol()">+ Колонка</button>
-    <button class="btn btn-red" onclick="delRow()">− Строка</button>
-    <button class="btn btn-red" onclick="delCol()">− Колонка</button>
-    <button class="btn btn-outline" onclick="openGraf()">График</button>
-    <button class="btn btn-outline" onclick="exportExcel()">Excel</button>
-    <span id="rowCount" style="color:#6c757d;font-size:13px;margin-left:auto;">0 строк, 0 колонок</span>
+    <button class="btn btn-blue" onclick="addRow()">+ Строка</button>
+    <button class="btn btn-blue" onclick="addCol()">+ Колонка</button>
+    <button class="btn btn-blue" onclick="delRow()">− Строка</button>
+    <button class="btn btn-blue" onclick="delCol()">− Колонка</button>
+    <button class="btn btn-blue" onclick="openGraf()">График</button>
+    <button class="btn btn-blue" onclick="exportExcel()">Excel</button>
+    <span id="rowCount" style="color:var(--text-muted);font-size:13px;margin-left:auto;">0 строк, 0 колонок</span>
 </div>
 <div class="table-wrap" id="tableContainer">
     <table id="dataTable"><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table>
-    <div id="emptyMsg" style="text-align:center;color:#6c757d;padding:40px;">Нет данных. Откройте эту страницу из режима чата после выполнения SQL-запроса.</div>
+    <div id="emptyMsg" style="text-align:center;color:var(--text-muted);padding:40px;">Нет данных. Откройте эту страницу из режима чата после выполнения SQL-запроса.</div>
 </div>
 {% endblock %}
 

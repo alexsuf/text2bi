@@ -159,7 +159,7 @@ client = None
 check_raw = _system_config.get("check", "yes").strip().lower()
 check_sql = check_raw in ("yes", "true", "1")
 
-DOWNLOADS_DIR = _system_config.get("download_dir", "./downloads").strip()
+DOWNLOADS_DIR = _system_config.get("download_dir", "app/downloads").strip()
 DOWNLOADS_DIR = os.path.normpath(DOWNLOADS_DIR)
 
 try:
@@ -250,28 +250,19 @@ db_description = get_db_description()
 # =========================
 def load_prompt_template_from_db(prompt_key):
     with get_db() as db:
-        prompt = db.query(Prompt).filter(Prompt.prompt_key == prompt_key, Prompt.is_active == True).first()
+        prompt = db.query(Prompt).filter(Prompt.prompt_key == prompt_key).first()
         if not prompt:
             raise FileNotFoundError(f"Prompt not found in DB: {prompt_key}")
         return prompt.content
 
 
-def load_prompt_template(file_path):
-    # Оставляем для совместимости если передают путь
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Prompt file not found: {file_path}")
-    with open(file_path, "r", encoding="utf-8") as f:
-        return f.read()
-
-
+# =========================
+# ПРИМЕНЕНИЕ ШАБЛОНА ПРОМПТА
+# =========================
 def build_messages_from_template(template_source, placeholders):
     log_message("BUILD_MSGS", f"template_source: {template_source}\nplaceholders keys: {list(placeholders.keys())}")
 
-    if isinstance(template_source, str) and os.path.exists(template_source):
-        template_text = load_prompt_template(template_source)
-    else:
-        # prompt_key или текст напрямую
-        template_text = template_source if isinstance(template_source, str) else str(template_source)
+    template_text = template_source if isinstance(template_source, str) else str(template_source)
 
     sections = {}
     current_section = None
@@ -329,9 +320,6 @@ def build_messages_from_template(template_source, placeholders):
     return messages
 
 
-# =========================
-# ПРИМЕНЕНИЕ ШАБЛОНА ПРОМПТА
-# =========================
 def build_messages_from_prompt_key(prompt_key, placeholders):
     template_text = load_prompt_template_from_db(prompt_key)
     return build_messages_from_template(template_text, placeholders)
@@ -421,37 +409,21 @@ def build_prompt(question, schema_text, db_desc):
 
 
 # =========================
-# ЗАГРУЗКА ПРИМЕРОВ (qa.txt -> БД в будущем, пока файл)
+# ЗАГРУЗКА ПРИМЕРОВ (из БД таблицы app.prompts)
 # =========================
-def load_examples(file_path="qa.txt", limit=10):
-    if not os.path.exists(file_path):
-        return ""
-    with open(file_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-    examples = []
-    current_q = None
-    current_sql = []
-    for line in lines:
-        line = line.strip()
-        if line.startswith("Запрос:"):
-            if current_q and current_sql:
-                examples.append((current_q, " ".join(current_sql)))
-            current_q = line.replace("Запрос:", "").strip()
-            current_sql = []
-        elif line.startswith("SQL:"):
-            sql_part = line.replace("SQL:", "").strip()
-            if sql_part:
-                current_sql.append(sql_part)
-        else:
-            if current_sql is not None:
-                current_sql.append(line)
-    if current_q and current_sql:
-        examples.append((current_q, " ".join(current_sql)))
-    examples = examples[-limit:]
-    return "\n\n".join([
-        f"Вопрос: {q}\nSQL:\n{sql.rstrip(';')}"
-        for q, sql in examples
-    ])
+def load_examples(limit=10):
+    """Load examples from DB prompts table with key 'prompt_generate_sql_examples'."""
+    with get_db() as db:
+        prompt = db.query(Prompt).filter(
+            Prompt.prompt_key == "prompt_generate_sql_examples"
+        ).first()
+        if not prompt or not prompt.content:
+            log_message("BUILD_PROMPT", "EXAMPLES: нет активного промпта prompt_generate_sql_examples")
+            return ""
+        examples_lines = prompt.content.strip().split("\n")
+    examples_text = "\n".join(examples_lines[:limit * 2])
+    log_message("BUILD_PROMPT", f"EXAMPLES: загружено {len(examples_lines)} строк (limit={limit})")
+    return examples_text
 
 
 # =========================
@@ -561,7 +533,7 @@ def _add_formatted_text(paragraph, text):
 # =========================
 # GENERATE WORD REPORT
 # =========================
-def generate_report(schema_text, db_desc, sql_query, df, filepath, chart_paths=None):
+def generate_report(schema_text, db_desc, sql_query, df, filepath, chart_paths=None, prompt_id=None):
     current_date = datetime.datetime.now().strftime("%d.%m.%Y")
     current_date_full = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
 
@@ -582,8 +554,21 @@ def generate_report(schema_text, db_desc, sql_query, df, filepath, chart_paths=N
             data_lines.append(" | ".join(str(v) for v in row))
         placeholders["DATA_STR"] = "\n".join(data_lines)
 
-    prompt_key = _system_config.get("prompt_report_key", "prompt_report")
-    messages = build_messages_from_prompt_key(prompt_key, placeholders)
+    if prompt_id:
+        from models import PromptReport
+        with get_db() as db:
+            pr = db.query(PromptReport).filter(PromptReport.id == prompt_id).first()
+        if pr:
+            system_text = pr.content
+            for k, v in placeholders.items():
+                system_text = system_text.replace("{" + k + "}", str(v))
+            messages = [{"role": "system", "content": system_text}]
+        else:
+            prompt_key = _system_config.get("prompt_report_key", "prompt_report")
+            messages = build_messages_from_prompt_key(prompt_key, placeholders)
+    else:
+        prompt_key = _system_config.get("prompt_report_key", "prompt_report")
+        messages = build_messages_from_prompt_key(prompt_key, placeholders)
 
     messages.append({
         "role": "user",

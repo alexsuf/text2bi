@@ -1,0 +1,3 @@
+Как сделать перенос базы Postgres:
+
+docker exec -it dash_db pg_dump -U postgres -d dash > dash-config.sql
