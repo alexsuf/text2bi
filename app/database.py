@@ -8,7 +8,7 @@ CONFIG_DB_USER = os.environ.get("CONFIG_DB_USER", "postgres")
 CONFIG_DB_PASSWORD = os.environ.get("CONFIG_DB_PASSWORD", "secret")
 CONFIG_DB_HOST = os.environ.get("CONFIG_DB_HOST", "dash_db")
 CONFIG_DB_PORT = os.environ.get("CONFIG_DB_PORT", "5432")
-CONFIG_DB_NAME = os.environ.get("CONFIG_DB", "dash")
+CONFIG_DB_NAME = os.environ.get("CONFIG_DB", "dash_config")
 
 DATABASE_URL = f"postgresql://{CONFIG_DB_USER}:{CONFIG_DB_PASSWORD}@{CONFIG_DB_HOST}:{CONFIG_DB_PORT}/{CONFIG_DB_NAME}"
 

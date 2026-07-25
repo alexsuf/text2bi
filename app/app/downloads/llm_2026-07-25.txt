@@ -1,0 +1,2623 @@
+[2026-07-25 00:05:25] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-25 00:05:25] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Пользователь: alex
+Дата и время: 2026-07-25 00:05:28
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+----------------
+Пользователь: alex
+Дата и время: 2026-07-25 00:05:28
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+----------------
+[USER REQUEST] alex | баланс по регионам
+[LLM RESPONSE] SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+============================================================
+[2026-07-25 00:05:28] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 00:07:37] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-25 00:07:37] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Пользователь: alex
+Дата и время: 2026-07-25 00:07:38
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    regions r
+JOIN 
+    clients c ON r.id = c.region_id
+JOIN 
+    finance f ON c.id = f.client_id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+----------------
+Пользователь: alex
+Дата и время: 2026-07-25 00:07:38
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    regions r
+JOIN 
+    clients c ON r.id = c.region_id
+JOIN 
+    finance f ON c.id = f.client_id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+----------------
+[USER REQUEST] alex | баланс по регионам
+[LLM RESPONSE] SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    regions r
+JOIN 
+    clients c ON r.id = c.region_id
+JOIN 
+    finance f ON c.id = f.client_id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+============================================================
+[2026-07-25 00:07:38] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+Дата и время запроса (2026-07-25 00:07:49):
+[system]
+[system_role]
+Ты готовишь аналитические отчеты на русском языке
+
+[user_role]
+Ты — эксперт по аналитике данных.
+
+[task]
+Сделай подробный структурированный отчет по представленным результатам.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ БАЗЫ ===
+Описание предметной области
+
+Компания занимается сервисным обслуживанием оборудования клиентов:
+банкоматов;
+касс;
+терминалов.
+
+Компания работает в разных регионах и обслуживает:
+банки;
+магазины;
+АЗС.
+
+Система хранит данные о клиентах, оборудовании, инженерах, сервисных заявках, SLA и финансах.
+
+Основные бизнес-сущности
+Регионы
+Таблица: regions
+Справочник регионов обслуживания.
+Поля:
+id — идентификатор региона;
+name — название региона.
+
+Клиенты
+Таблица: clients
+Организации, обслуживаемые сервисной компанией.
+Поля:
+id — идентификатор клиента;
+name — название клиента;
+type — тип клиента:
+Магазины;
+Банки;
+АЗС;
+region_id — регион клиента;
+connected_date — дата подключения клиента.
+
+Связи:
+клиент принадлежит региону;
+клиент имеет сервисные объекты;
+клиент имеет финансовые показатели;
+клиент имеет контактных лиц.
+
+Таблица: client_contacts
+Контактные лица клиентов.
+Поля:
+client_id — клиент;
+contact_name — ФИО контактного лица;
+phone — телефон.
+
+Связи:
+у одного клиента может быть несколько контактов.
+Примеры запросов:
+
+Таблица: service_objects
+Оборудование, установленное у клиентов.
+Типы объектов:
+Банкомат;
+Касса;
+Терминал.
+
+Поля:
+client_id — владелец объекта;
+type — тип оборудования;
+address — адрес установки;
+install_date — дата установки;
+status — состояние:
+Активен;
+Отключен.
+
+Связи:
+объект принадлежит клиенту;
+объект участвует в сервисных заявках.
+
+Инженеры
+Таблица: engineers
+Сотрудники сервисной компании.
+Поля:
+id — идентификатор инженера;
+full_name — ФИО;
+region_id — регион работы;
+skill_level — уровень:
+Junior;
+Middle;
+Senior.
+
+Связи:
+инженер работает в регионе;
+инженер выполняет заявки;
+инженер имеет навыки;
+инженер имеет контактный телефон.
+
+
+Таблица: engineer_contacts
+Телефоны инженеров.
+Поля:
+engineer_id — инженер;
+phone — телефон.
+Навыки инженеров
+
+Таблица: engineer_skills
+Специализация инженеров по типам оборудования.
+Поля:
+engineer_id;
+object_type.
+
+Типы оборудования:
+Банкомат;
+Касса;
+Терминал.
+
+Сервисные заявки
+Таблица: service_requests
+Основная операционная таблица сервисной деятельности.
+Типы заявок:
+Инцидент;
+Плановое ТО.
+
+Статусы:
+Открыта;
+В работе;
+Закрыта.
+
+Поля:
+object_id — объект обслуживания;
+engineer_id — ответственный инженер;
+created_at — дата создания;
+closed_at — дата закрытия;
+request_type — тип заявки;
+status — статус заявки;
+duration_hours — длительность выполнения.
+
+Связи:
+заявка относится к объекту;
+заявка выполняется инженером;
+заявка участвует в SLA аналитике.
+
+Таблица: request_status_history
+История изменения статусов заявок.
+Поля:
+request_id;
+status;
+changed_at.
+
+Используется для:
+аудита;
+анализа времени реакции;
+построения timeline.
+
+Таблица: sla_rules
+Нормативы SLA.
+Поля:
+request_type;
+max_hours.
+
+Правила:
+Инцидент → 24 часа;
+Плановое ТО → 72 часа.
+
+Финансы
+Таблица: finance
+Финансовые показатели клиентов.
+Поля:
+client_id;
+month;
+revenue — выручка;
+costs — расходы.
+
+Вычисляемые показатели:
+прибыль = revenue - costs.
+
+Бизнес-связи между сущностями
+Клиент → Регион
+clients.region_id → regions.id
+Клиент относится к региону
+Объект → Клиент
+service_objects.client_id → clients.id
+Оборудование принадлежит клиенту.
+Заявка → Объект
+service_requests.object_id → service_objects.id
+Заявка создаётся по объекту.
+Заявка → Инженер
+service_requests.engineer_id → engineers.id
+Заявка назначается инженеру.
+Инженер → Регион
+engineers.region_id → regions.id
+Инженер работает в регионе.
+Финансы → Клиент
+finance.client_id → clients.id
+Финансы учитываются по клиенту.
+
+Аналитические витрины (Data Marts)
+mart_requests
+Аналитика заявок по месяцам и регионам.
+Показатели:
+количество заявок;
+средняя длительность.
+
+mart_finance
+Финансовая аналитика.
+Показатели:
+revenue;
+costs;
+profit.
+mart_sla
+
+Проверка выполнения SLA по каждой заявке.
+Поле:
+sla_met:
+1 = SLA выполнен;
+0 = SLA нарушен.
+
+mart_sla_region
+SLA по регионам и месяцам.
+Показатель:
+sla_rate.
+
+mart_engineer_load
+Нагрузка инженеров.
+
+Показатели:
+total_requests;
+total_hours;
+avg_time.
+
+mart_top_engineers
+Рейтинг инженеров по закрытым заявкам.
+
+mart_region_load
+Нагрузка по регионам.
+
+mart_client_profit
+Прибыльность клиентов.
+
+mart_request_types
+Сравнение:
+Инцидентов;
+Планового ТО.
+
+mart_active_requests
+Текущие активные заявки.
+
+Синонимы бизнес-терминов для LLM
+
+Клиенты
+Синонимы:
+заказчики;
+организации;
+контрагенты;
+компании.
+
+Инженеры
+Синонимы:
+сотрудники;
+сервисные инженеры;
+специалисты;
+техперсонал.
+
+Заявки
+Синонимы:
+обращения;
+тикеты;
+инциденты;
+сервисные запросы.
+
+Объекты
+Синонимы:
+оборудование;
+устройства;
+терминалы;
+банкоматы;
+кассы.
+
+SLA
+Синонимы:
+норматив;
+время реакции;
+качество сервиса;
+выполнение SLA.
+
+=== SQL-ЗАПРОС ===
+SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    regions r
+JOIN 
+    clients c ON r.id = c.region_id
+JOIN 
+    finance f ON c.id = f.client_id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name LIMIT 1000
+
+=== ДАННЫЕ (первые 100 строк) ===
+region | total_revenue | total_costs | balance
+-------+---------------+-------------+--------
+Екатеринбург | 42608972.76 | 20812896.58 | 21796076.18
+Казань | 33507297.31 | 16755773.34 | 16751523.97
+Москва | 24130829.17 | 11456548.17 | 12674281.0
+Новосибирск | 15645103.17 | 8074417.37 | 7570685.8
+Санкт-Петербург | 31442609.72 | 15028393.4 | 16414216.32
+
+Отчет должен содержать:
+1. Краткое описание — что показывает запрос, какую бизнес-задачу решает
+2. Анализ ключевых показателей — цифры, закономерности, тенденции, аномалии. 
+Анализ ключевых показателей сделай в виде списка.
+3. Выводы и рекомендации — что можно улучшить, на что обратить внимание
+
+Заголовок отчета должен быть "По компании Сервионика"
+
+Внизу отчета слева должно быть написано "Дата формирования отчета: dd.mm.yyyy" (текущая дата)
+
+Оформи отчет в markdown. Используй заголовки ## для разделов.
+
+[user]
+СТРОГОЕ ПРЕДУПРЕЖДЕНИЕ О ДАТАХ:
+Сегодня 25.07.2026 (25.07.2026 00:07).
+Используй ТОЛЬКО эту дату как 'сегодня', 'текущая дата', 'дата отчёта'.
+1. Никогда не выдумывай и не изменяй даты.
+2. Если нужно указать дату отчёта — пиши '25.07.2026'.
+3. Даты из данных таблицы бери ТОЛЬКО из колонок с данными.
+4. Не заменяй даты из данных на другие.
+5. Все числовые значения должны быть взяты непосредственно из данных.
+6. Если в данных нет какой-то информации — не добавляй её от себя.
+7. Пиши отчёт строго по фактам из предоставленной таблицы.
+
+=============================================
+[2026-07-25 00:10:50] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 00:10:50] [BUILD_MSGS]
+template_source: [system_role]
+Ты анализируешь ошибки SQL
+
+[user_role]
+Ты — опытный аналитик баз данных.
+
+[task]
+Тебе нужно объяснить,
+почему данный SQL-скрипт
+не работает в данной структуре базы.
+
+=== СТРУКТУРА БАЗЫ ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ БАЗЫ ===
+{DB_DESC}
+
+=== SQL ===
+{SQL_QUERY}
+
+=== ОШИБКА PostgreSQL ===
+{ERROR_TEXT}
+
+=== ЗАДАЧА ===
+1. Объясни причину ошибки
+2. Укажи проблемное место
+3. Если возможно —
+   предложи исправленный SQL
+4. Ответ дай простым языком
+5. Ответ оформи красиво
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'SQL_QUERY', 'ERROR_TEXT']
+============================================================
+Дата и время запроса (2026-07-25 00:10:50):
+[system]
+Ты анализируешь ошибки SQL
+
+[user]
+Ты — опытный аналитик баз данных.
+
+Тебе нужно объяснить,
+почему данный SQL-скрипт
+не работает в данной структуре базы.
+
+=== СТРУКТУРА БАЗЫ ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ БАЗЫ ===
+Описание предметной области
+
+Компания занимается сервисным обслуживанием оборудования клиентов:
+банкоматов;
+касс;
+терминалов.
+
+Компания работает в разных регионах и обслуживает:
+банки;
+магазины;
+АЗС.
+
+Система хранит данные о клиентах, оборудовании, инженерах, сервисных заявках, SLA и финансах.
+
+Основные бизнес-сущности
+Регионы
+Таблица: regions
+Справочник регионов обслуживания.
+Поля:
+id — идентификатор региона;
+name — название региона.
+
+Клиенты
+Таблица: clients
+Организации, обслуживаемые сервисной компанией.
+Поля:
+id — идентификатор клиента;
+name — название клиента;
+type — тип клиента:
+Магазины;
+Банки;
+АЗС;
+region_id — регион клиента;
+connected_date — дата подключения клиента.
+
+Связи:
+клиент принадлежит региону;
+клиент имеет сервисные объекты;
+клиент имеет финансовые показатели;
+клиент имеет контактных лиц.
+
+Таблица: client_contacts
+Контактные лица клиентов.
+Поля:
+client_id — клиент;
+contact_name — ФИО контактного лица;
+phone — телефон.
+
+Связи:
+у одного клиента может быть несколько контактов.
+Примеры запросов:
+
+Таблица: service_objects
+Оборудование, установленное у клиентов.
+Типы объектов:
+Банкомат;
+Касса;
+Терминал.
+
+Поля:
+client_id — владелец объекта;
+type — тип оборудования;
+address — адрес установки;
+install_date — дата установки;
+status — состояние:
+Активен;
+Отключен.
+
+Связи:
+объект принадлежит клиенту;
+объект участвует в сервисных заявках.
+
+Инженеры
+Таблица: engineers
+Сотрудники сервисной компании.
+Поля:
+id — идентификатор инженера;
+full_name — ФИО;
+region_id — регион работы;
+skill_level — уровень:
+Junior;
+Middle;
+Senior.
+
+Связи:
+инженер работает в регионе;
+инженер выполняет заявки;
+инженер имеет навыки;
+инженер имеет контактный телефон.
+
+
+Таблица: engineer_contacts
+Телефоны инженеров.
+Поля:
+engineer_id — инженер;
+phone — телефон.
+Навыки инженеров
+
+Таблица: engineer_skills
+Специализация инженеров по типам оборудования.
+Поля:
+engineer_id;
+object_type.
+
+Типы оборудования:
+Банкомат;
+Касса;
+Терминал.
+
+Сервисные заявки
+Таблица: service_requests
+Основная операционная таблица сервисной деятельности.
+Типы заявок:
+Инцидент;
+Плановое ТО.
+
+Статусы:
+Открыта;
+В работе;
+Закрыта.
+
+Поля:
+object_id — объект обслуживания;
+engineer_id — ответственный инженер;
+created_at — дата создания;
+closed_at — дата закрытия;
+request_type — тип заявки;
+status — статус заявки;
+duration_hours — длительность выполнения.
+
+Связи:
+заявка относится к объекту;
+заявка выполняется инженером;
+заявка участвует в SLA аналитике.
+
+Таблица: request_status_history
+История изменения статусов заявок.
+Поля:
+request_id;
+status;
+changed_at.
+
+Используется для:
+аудита;
+анализа времени реакции;
+построения timeline.
+
+Таблица: sla_rules
+Нормативы SLA.
+Поля:
+request_type;
+max_hours.
+
+Правила:
+Инцидент → 24 часа;
+Плановое ТО → 72 часа.
+
+Финансы
+Таблица: finance
+Финансовые показатели клиентов.
+Поля:
+client_id;
+month;
+revenue — выручка;
+costs — расходы.
+
+Вычисляемые показатели:
+прибыль = revenue - costs.
+
+Бизнес-связи между сущностями
+Клиент → Регион
+clients.region_id → regions.id
+Клиент относится к региону
+Объект → Клиент
+service_objects.client_id → clients.id
+Оборудование принадлежит клиенту.
+Заявка → Объект
+service_requests.object_id → service_objects.id
+Заявка создаётся по объекту.
+Заявка → Инженер
+service_requests.engineer_id → engineers.id
+Заявка назначается инженеру.
+Инженер → Регион
+engineers.region_id → regions.id
+Инженер работает в регионе.
+Финансы → Клиент
+finance.client_id → clients.id
+Финансы учитываются по клиенту.
+
+Аналитические витрины (Data Marts)
+mart_requests
+Аналитика заявок по месяцам и регионам.
+Показатели:
+количество заявок;
+средняя длительность.
+
+mart_finance
+Финансовая аналитика.
+Показатели:
+revenue;
+costs;
+profit.
+mart_sla
+
+Проверка выполнения SLA по каждой заявке.
+Поле:
+sla_met:
+1 = SLA выполнен;
+0 = SLA нарушен.
+
+mart_sla_region
+SLA по регионам и месяцам.
+Показатель:
+sla_rate.
+
+mart_engineer_load
+Нагрузка инженеров.
+
+Показатели:
+total_requests;
+total_hours;
+avg_time.
+
+mart_top_engineers
+Рейтинг инженеров по закрытым заявкам.
+
+mart_region_load
+Нагрузка по регионам.
+
+mart_client_profit
+Прибыльность клиентов.
+
+mart_request_types
+Сравнение:
+Инцидентов;
+Планового ТО.
+
+mart_active_requests
+Текущие активные заявки.
+
+Синонимы бизнес-терминов для LLM
+
+Клиенты
+Синонимы:
+заказчики;
+организации;
+контрагенты;
+компании.
+
+Инженеры
+Синонимы:
+сотрудники;
+сервисные инженеры;
+специалисты;
+техперсонал.
+
+Заявки
+Синонимы:
+обращения;
+тикеты;
+инциденты;
+сервисные запросы.
+
+Объекты
+Синонимы:
+оборудование;
+устройства;
+терминалы;
+банкоматы;
+кассы.
+
+SLA
+Синонимы:
+норматив;
+время реакции;
+качество сервиса;
+выполнение SLA.
+
+=== SQL ===
+SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+FROM 
+    regions r
+JOIN 
+    clients c ON r.id = c.region_id
+JOIN 
+    finance f ON c.id = f.client_id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name LIMIT 1000
+
+=== ОШИБКА PostgreSQL ===
+ОШИБКА:  ошибка синтаксиса (примерное положение: "FROM")
+LINE 5: FROM 
+        ^
+
+
+=== ЗАДАЧА ===
+1. Объясни причину ошибки
+2. Укажи проблемное место
+3. Если возможно —
+   предложи исправленный SQL
+4. Ответ дай простым языком
+5. Ответ оформи красиво
+
+=============================================
+[2026-07-25 00:14:57] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-25 00:14:57] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Пользователь: alex
+Дата и время: 2026-07-25 00:15:07
+Вопрос: самые занятые инженеры
+Ответ LLM: SQL:
+SELECT 
+    e.full_name,
+    COUNT(sr.id) AS total_requests,
+    SUM(sr.duration_hours) AS total_hours,
+    AVG(sr.duration_hours) AS avg_time
+FROM 
+    engineers e
+JOIN 
+    service_requests sr ON e.id = sr.engineer_id
+GROUP BY 
+    e.full_name
+ORDER BY 
+    total_requests DESC
+----------------
+Пользователь: alex
+Дата и время: 2026-07-25 00:15:07
+Вопрос: самые занятые инженеры
+Ответ LLM: SQL:
+SELECT 
+    e.full_name,
+    COUNT(sr.id) AS total_requests,
+    SUM(sr.duration_hours) AS total_hours,
+    AVG(sr.duration_hours) AS avg_time
+FROM 
+    engineers e
+JOIN 
+    service_requests sr ON e.id = sr.engineer_id
+GROUP BY 
+    e.full_name
+ORDER BY 
+    total_requests DESC
+----------------
+[USER REQUEST] alex | самые занятые инженеры
+[LLM RESPONSE] SQL:
+SELECT 
+    e.full_name,
+    COUNT(sr.id) AS total_requests,
+    SUM(sr.duration_hours) AS total_hours,
+    AVG(sr.duration_hours) AS avg_time
+FROM 
+    engineers e
+JOIN 
+    service_requests sr ON e.id = sr.engineer_id
+GROUP BY 
+    e.full_name
+ORDER BY 
+    total_requests DESC
+============================================================
+[2026-07-25 00:15:07] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 00:15:51] [BUILD_MSGS]
+template_source: [system_role]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ БАЗЫ ===
+{DB_DESC}
+
+=== SQL-ЗАПРОС ===
+{SQL_QUERY}
+
+=== ДАННЫЕ ===
+{SQL_DATA}
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user_role]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание. 
+
+[task]
+{QUESTION}
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'SQL_QUERY', 'SQL_DATA', 'QUESTION']
+============================================================
+Дата и время запроса (2026-07-25 00:15:51):
+[system]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ БАЗЫ ===
+Описание предметной области
+
+Компания занимается сервисным обслуживанием оборудования клиентов:
+банкоматов;
+касс;
+терминалов.
+
+Компания работает в разных регионах и обслуживает:
+банки;
+магазины;
+АЗС.
+
+Система хранит данные о клиентах, оборудовании, инженерах, сервисных заявках, SLA и финансах.
+
+Основные бизнес-сущности
+Регионы
+Таблица: regions
+Справочник регионов обслуживания.
+Поля:
+id — идентификатор региона;
+name — название региона.
+
+Клиенты
+Таблица: clients
+Организации, обслуживаемые сервисной компанией.
+Поля:
+id — идентификатор клиента;
+name — название клиента;
+type — тип клиента:
+Магазины;
+Банки;
+АЗС;
+region_id — регион клиента;
+connected_date — дата подключения клиента.
+
+Связи:
+клиент принадлежит региону;
+клиент имеет сервисные объекты;
+клиент имеет финансовые показатели;
+клиент имеет контактных лиц.
+
+Таблица: client_contacts
+Контактные лица клиентов.
+Поля:
+client_id — клиент;
+contact_name — ФИО контактного лица;
+phone — телефон.
+
+Связи:
+у одного клиента может быть несколько контактов.
+Примеры запросов:
+
+Таблица: service_objects
+Оборудование, установленное у клиентов.
+Типы объектов:
+Банкомат;
+Касса;
+Терминал.
+
+Поля:
+client_id — владелец объекта;
+type — тип оборудования;
+address — адрес установки;
+install_date — дата установки;
+status — состояние:
+Активен;
+Отключен.
+
+Связи:
+объект принадлежит клиенту;
+объект участвует в сервисных заявках.
+
+Инженеры
+Таблица: engineers
+Сотрудники сервисной компании.
+Поля:
+id — идентификатор инженера;
+full_name — ФИО;
+region_id — регион работы;
+skill_level — уровень:
+Junior;
+Middle;
+Senior.
+
+Связи:
+инженер работает в регионе;
+инженер выполняет заявки;
+инженер имеет навыки;
+инженер имеет контактный телефон.
+
+
+Таблица: engineer_contacts
+Телефоны инженеров.
+Поля:
+engineer_id — инженер;
+phone — телефон.
+Навыки инженеров
+
+Таблица: engineer_skills
+Специализация инженеров по типам оборудования.
+Поля:
+engineer_id;
+object_type.
+
+Типы оборудования:
+Банкомат;
+Касса;
+Терминал.
+
+Сервисные заявки
+Таблица: service_requests
+Основная операционная таблица сервисной деятельности.
+Типы заявок:
+Инцидент;
+Плановое ТО.
+
+Статусы:
+Открыта;
+В работе;
+Закрыта.
+
+Поля:
+object_id — объект обслуживания;
+engineer_id — ответственный инженер;
+created_at — дата создания;
+closed_at — дата закрытия;
+request_type — тип заявки;
+status — статус заявки;
+duration_hours — длительность выполнения.
+
+Связи:
+заявка относится к объекту;
+заявка выполняется инженером;
+заявка участвует в SLA аналитике.
+
+Таблица: request_status_history
+История изменения статусов заявок.
+Поля:
+request_id;
+status;
+changed_at.
+
+Используется для:
+аудита;
+анализа времени реакции;
+построения timeline.
+
+Таблица: sla_rules
+Нормативы SLA.
+Поля:
+request_type;
+max_hours.
+
+Правила:
+Инцидент → 24 часа;
+Плановое ТО → 72 часа.
+
+Финансы
+Таблица: finance
+Финансовые показатели клиентов.
+Поля:
+client_id;
+month;
+revenue — выручка;
+costs — расходы.
+
+Вычисляемые показатели:
+прибыль = revenue - costs.
+
+Бизнес-связи между сущностями
+Клиент → Регион
+clients.region_id → regions.id
+Клиент относится к региону
+Объект → Клиент
+service_objects.client_id → clients.id
+Оборудование принадлежит клиенту.
+Заявка → Объект
+service_requests.object_id → service_objects.id
+Заявка создаётся по объекту.
+Заявка → Инженер
+service_requests.engineer_id → engineers.id
+Заявка назначается инженеру.
+Инженер → Регион
+engineers.region_id → regions.id
+Инженер работает в регионе.
+Финансы → Клиент
+finance.client_id → clients.id
+Финансы учитываются по клиенту.
+
+Аналитические витрины (Data Marts)
+mart_requests
+Аналитика заявок по месяцам и регионам.
+Показатели:
+количество заявок;
+средняя длительность.
+
+mart_finance
+Финансовая аналитика.
+Показатели:
+revenue;
+costs;
+profit.
+mart_sla
+
+Проверка выполнения SLA по каждой заявке.
+Поле:
+sla_met:
+1 = SLA выполнен;
+0 = SLA нарушен.
+
+mart_sla_region
+SLA по регионам и месяцам.
+Показатель:
+sla_rate.
+
+mart_engineer_load
+Нагрузка инженеров.
+
+Показатели:
+total_requests;
+total_hours;
+avg_time.
+
+mart_top_engineers
+Рейтинг инженеров по закрытым заявкам.
+
+mart_region_load
+Нагрузка по регионам.
+
+mart_client_profit
+Прибыльность клиентов.
+
+mart_request_types
+Сравнение:
+Инцидентов;
+Планового ТО.
+
+mart_active_requests
+Текущие активные заявки.
+
+Синонимы бизнес-терминов для LLM
+
+Клиенты
+Синонимы:
+заказчики;
+организации;
+контрагенты;
+компании.
+
+Инженеры
+Синонимы:
+сотрудники;
+сервисные инженеры;
+специалисты;
+техперсонал.
+
+Заявки
+Синонимы:
+обращения;
+тикеты;
+инциденты;
+сервисные запросы.
+
+Объекты
+Синонимы:
+оборудование;
+устройства;
+терминалы;
+банкоматы;
+кассы.
+
+SLA
+Синонимы:
+норматив;
+время реакции;
+качество сервиса;
+выполнение SLA.
+
+=== SQL-ЗАПРОС ===
+
+
+=== ДАННЫЕ ===
+
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание.
+
+регионы по степени sla
+
+=============================================
+Пользователь: alex
+Дата и время: 2026-07-25 00:15:54
+Вопрос: регионы по степени sla
+Ответ LLM: ## Регионы по степени SLA
+
+Чтобы получить регионы, отсортированные по степени выполнения SLA, используйте аналитическую витрину `mart_sla_region`:
+
+```sql
+SELECT 
+    region,
+    sla_rate
+FROM mart_sla_region
+ORDER BY sla_rate DESC;
+```
+
+### Результат
+
+| region | sla_rate |
+|--------|----------|
+| ... | ... |
+
+### Пояснение
+
+- **mart_sla_region** — аналитическая витрина, содержащая показатель выполнения SLA по регионам и месяцам
+- **sla_rate** — доля заявок, выполненных в установленные нормативы (от 0 до 1)
+- **ORDER BY sla_rate DESC** — сортировка от лучшего к худшему выполнению SLA
+
+Если нужно посмотреть SLA по отдельным месяцам для каждого региона:
+
+```sql
+SELECT 
+    region,
+    month,
+    sla_rate
+FROM mart_sla_region
+ORDER BY region, month DESC;
+```
+----------------
+Пользователь: alex
+Дата и время: 2026-07-25 00:15:54
+Вопрос: регионы по степени sla
+Ответ LLM: ## Регионы по степени SLA
+
+Чтобы получить регионы, отсортированные по степени выполнения SLA, используйте аналитическую витрину `mart_sla_region`:
+
+```sql
+SELECT 
+    region,
+    sla_rate
+FROM mart_sla_region
+ORDER BY sla_rate DESC;
+```
+
+### Результат
+
+| region | sla_rate |
+|--------|----------|
+| ... | ... |
+
+### Пояснение
+
+- **mart_sla_region** — аналитическая витрина, содержащая показатель выполнения SLA по регионам и месяцам
+- **sla_rate** — доля заявок, выполненных в установленные нормативы (от 0 до 1)
+- **ORDER BY sla_rate DESC** — сортировка от лучшего к худшему выполнению SLA
+
+Если нужно посмотреть SLA по отдельным месяцам для каждого региона:
+
+```sql
+SELECT 
+    region,
+    month,
+    sla_rate
+FROM mart_sla_region
+ORDER BY region, month DESC;
+```
+----------------
+[USER REQUEST] alex | регионы по степени sla
+[LLM RESPONSE] ## Регионы по степени SLA
+
+Чтобы получить регионы, отсортированные по степени выполнения SLA, используйте аналитическую витрину `mart_sla_region`:
+
+```sql
+SELECT 
+    region,
+    sla_rate
+FROM mart_sla_region
+ORDER BY sla_rate DESC;
+```
+
+### Результат
+
+| region | sla_rate |
+|--------|----------|
+| ... | ... |
+
+### Пояснение
+
+- **mart_sla_region** — аналитическая витрина, содержащая показатель выполнения SLA по регионам и месяцам
+- **sla_rate** — доля заявок, выполненных в установленные нормативы (от 0 до 1)
+- **ORDER BY sla_rate DESC** — сортировка от лучшего к худшему выполнению SLA
+
+Если нужно посмотреть SLA по отдельным месяцам для каждого региона:
+
+```sql
+SELECT 
+    region,
+    month,
+    sla_rate
+FROM mart_sla_region
+ORDER BY region, month DESC;
+```
+============================================================
+[2026-07-25 00:22:14] [BUILD_MSGS]
+template_source: [system_role]
+
+Ты — эксперт по анализу данных.
+
+=== ТАБЛИЦА С ДАННЫМИ ===
+{TABLE_DATA}
+
+Отвечай на вопросы пользователя о данных в таблице. Анализируй числа, находи закономерности, аномалии, тренды. Используй markdown для форматирования (таблицы, код, списки).
+
+[user_role]
+
+Ответь на вопрос пользователя, используя данные таблицы и схему базы.
+
+[task]
+{QUESTION}
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'QUESTION', 'TABLES']
+============================================================
+Дата и время запроса (2026-07-25 00:22:14):
+[system]
+Ты — эксперт по анализу данных.
+
+=== ТАБЛИЦА С ДАННЫМИ ===
+{TABLE_DATA}
+
+Отвечай на вопросы пользователя о данных в таблице. Анализируй числа, находи закономерности, аномалии, тренды. Используй markdown для форматирования (таблицы, код, списки).
+
+[user]
+Ответь на вопрос пользователя, используя данные таблицы и схему базы.
+
+Объедини все строки с одинаковыми regoin
+
+=============================================
+[2026-07-25 00:23:05] [BUILD_MSGS]
+template_source: [system_role]
+
+Ты — эксперт по анализу данных.
+
+=== ТАБЛИЦА С ДАННЫМИ ===
+{TABLE_DATA}
+
+Отвечай на вопросы пользователя о данных в таблице. Анализируй числа, находи закономерности, аномалии, тренды. Используй markdown для форматирования (таблицы, код, списки).
+
+[user_role]
+
+Ответь на вопрос пользователя, используя данные таблицы и схему базы.
+
+[task]
+{QUESTION}
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'QUESTION', 'TABLES']
+============================================================
+Дата и время запроса (2026-07-25 00:23:05):
+[system]
+Ты — эксперт по анализу данных.
+
+=== ТАБЛИЦА С ДАННЫМИ ===
+{TABLE_DATA}
+
+Отвечай на вопросы пользователя о данных в таблице. Анализируй числа, находи закономерности, аномалии, тренды. Используй markdown для форматирования (таблицы, код, списки).
+
+[user]
+Ответь на вопрос пользователя, используя данные таблицы и схему базы.
+
+В колонке month сделай русское название месяца
+
+=============================================
+[2026-07-25 08:55:57] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-25 08:55:57] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Пользователь: alex
+Дата и время: 2026-07-25 08:56:04
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+----------------
+Пользователь: alex
+Дата и время: 2026-07-25 08:56:04
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+----------------
+[USER REQUEST] alex | баланс по регионам
+[LLM RESPONSE] SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+============================================================
+[2026-07-25 08:56:05] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 08:57:29] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-25 08:57:29] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Пользователь: alex
+Дата и время: 2026-07-25 08:57:39
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    region,
+    SUM(revenue) AS revenue,
+    SUM(costs) AS costs,
+    SUM(profit) AS profit
+FROM 
+    mart_finance
+GROUP BY 
+    region;
+----------------
+Пользователь: alex
+Дата и время: 2026-07-25 08:57:39
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    region,
+    SUM(revenue) AS revenue,
+    SUM(costs) AS costs,
+    SUM(profit) AS profit
+FROM 
+    mart_finance
+GROUP BY 
+    region;
+----------------
+[USER REQUEST] alex | баланс по регионам
+[LLM RESPONSE] SELECT 
+    region,
+    SUM(revenue) AS revenue,
+    SUM(costs) AS costs,
+    SUM(profit) AS profit
+FROM 
+    mart_finance
+GROUP BY 
+    region;
+============================================================
+[2026-07-25 08:57:39] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 09:11:57] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-25 09:11:57] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Пользователь: alex
+Дата и время: 2026-07-25 09:11:59
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+----------------
+Пользователь: alex
+Дата и время: 2026-07-25 09:11:59
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+----------------
+[USER REQUEST] alex | баланс по регионам
+[LLM RESPONSE] SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+============================================================
+[2026-07-25 09:11:59] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 09:25:31] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-25 09:25:31] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+[2026-07-25 09:25:35] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 09:25:43] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-25 09:25:44] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+[2026-07-25 09:25:47] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 09:25:54] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-25 09:25:54] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+[2026-07-25 09:25:56] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 09:40:43] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-25 09:40:43] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Пользователь: alex
+Дата и время: 2026-07-25 09:40:44
+Вопрос: test
+Ответ LLM: SELECT * FROM clients LIMIT 1;
+----------------
+Пользователь: alex
+Дата и время: 2026-07-25 09:40:44
+Вопрос: test
+Ответ LLM: SELECT * FROM clients LIMIT 1;
+----------------
+[USER REQUEST] alex | test
+[LLM RESPONSE] SELECT * FROM clients LIMIT 1;
+============================================================
+[2026-07-25 09:40:44] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 09:40:55] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 09:46:06] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 09:47:17] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-25 09:47:17] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Пользователь: alex
+Дата и время: 2026-07-25 09:47:42
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    region,
+    SUM(revenue) AS revenue,
+    SUM(costs) AS costs,
+    SUM(profit) AS profit
+FROM 
+    mart_finance
+GROUP BY 
+    region;
+----------------
+Пользователь: alex
+Дата и время: 2026-07-25 09:47:42
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    region,
+    SUM(revenue) AS revenue,
+    SUM(costs) AS costs,
+    SUM(profit) AS profit
+FROM 
+    mart_finance
+GROUP BY 
+    region;
+----------------
+[USER REQUEST] alex | баланс по регионам
+[LLM RESPONSE] SELECT 
+    region,
+    SUM(revenue) AS revenue,
+    SUM(costs) AS costs,
+    SUM(profit) AS profit
+FROM 
+    mart_finance
+GROUP BY 
+    region;
+============================================================
+[2026-07-25 09:47:44] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 09:48:28] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-25 09:48:29] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Пользователь: alex
+Дата и время: 2026-07-25 09:48:43
+Вопрос: самые нагруженные инженеры и их квалификация
+Ответ LLM: SQL:
+SELECT 
+    e.full_name, 
+    COUNT(sr.id) AS total_requests, 
+    SUM(sr.duration_hours) AS total_hours, 
+    e.skill_level
+FROM 
+    engineers e
+JOIN 
+    service_requests sr ON e.id = sr.engineer_id
+GROUP BY 
+    e.id, e.full_name, e.skill_level
+ORDER BY 
+    total_requests DESC
+LIMIT 5;
+----------------
+Пользователь: alex
+Дата и время: 2026-07-25 09:48:43
+Вопрос: самые нагруженные инженеры и их квалификация
+Ответ LLM: SQL:
+SELECT 
+    e.full_name, 
+    COUNT(sr.id) AS total_requests, 
+    SUM(sr.duration_hours) AS total_hours, 
+    e.skill_level
+FROM 
+    engineers e
+JOIN 
+    service_requests sr ON e.id = sr.engineer_id
+GROUP BY 
+    e.id, e.full_name, e.skill_level
+ORDER BY 
+    total_requests DESC
+LIMIT 5;
+----------------
+[USER REQUEST] alex | самые нагруженные инженеры и их квалификация
+[LLM RESPONSE] SQL:
+SELECT 
+    e.full_name, 
+    COUNT(sr.id) AS total_requests, 
+    SUM(sr.duration_hours) AS total_hours, 
+    e.skill_level
+FROM 
+    engineers e
+JOIN 
+    service_requests sr ON e.id = sr.engineer_id
+GROUP BY 
+    e.id, e.full_name, e.skill_level
+ORDER BY 
+    total_requests DESC
+LIMIT 5;
+============================================================
+[2026-07-25 09:48:44] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 09:51:14] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 10:00:48] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 10:00:52] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 10:01:11] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 10:01:50] [BUILD_MSGS]
+template_source: [system_role]
+
+Ты — эксперт по анализу данных.
+
+=== ТАБЛИЦА С ДАННЫМИ ===
+{TABLE_DATA}
+
+Отвечай на вопросы пользователя о данных в таблице. Анализируй числа, находи закономерности, аномалии, тренды. Используй markdown для форматирования (таблицы, код, списки).
+
+[user_role]
+
+Ответь на вопрос пользователя, используя данные таблицы и схему базы.
+
+[task]
+{QUESTION}
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'QUESTION', 'TABLES']
+============================================================
+Дата и время запроса (2026-07-25 10:01:50):
+[system]
+Ты — эксперт по анализу данных.
+
+=== ТАБЛИЦА С ДАННЫМИ ===
+{TABLE_DATA}
+
+Отвечай на вопросы пользователя о данных в таблице. Анализируй числа, находи закономерности, аномалии, тренды. Используй markdown для форматирования (таблицы, код, списки).
+
+[user]
+Ответь на вопрос пользователя, используя данные таблицы и схему базы.
+
+самые прибыльные клиенты
+
+=============================================
+[2026-07-25 10:02:23] [BUILD_MSGS]
+template_source: [system_role]
+
+Ты — эксперт по анализу данных.
+
+=== ТАБЛИЦА С ДАННЫМИ ===
+{TABLE_DATA}
+
+Отвечай на вопросы пользователя о данных в таблице. Анализируй числа, находи закономерности, аномалии, тренды. Используй markdown для форматирования (таблицы, код, списки).
+
+[user_role]
+
+Ответь на вопрос пользователя, используя данные таблицы и схему базы.
+
+[task]
+{QUESTION}
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'QUESTION', 'TABLES']
+============================================================
+Дата и время запроса (2026-07-25 10:02:23):
+[system]
+Ты — эксперт по анализу данных.
+
+=== ТАБЛИЦА С ДАННЫМИ ===
+{TABLE_DATA}
+
+Отвечай на вопросы пользователя о данных в таблице. Анализируй числа, находи закономерности, аномалии, тренды. Используй markdown для форматирования (таблицы, код, списки).
+
+[user]
+Ответь на вопрос пользователя, используя данные таблицы и схему базы.
+
+клиенты с самым большим числом заявок
+
+=============================================
+[2026-07-25 10:06:43] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 10:07:23] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 10:10:25] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 10:12:16] [BUILD_MSGS]
+template_source: [system_role]
+
+Ты — эксперт по анализу данных.
+
+=== ТАБЛИЦА С ДАННЫМИ ===
+{TABLE_DATA}
+
+Отвечай на вопросы пользователя о данных в таблице. Анализируй числа, находи закономерности, аномалии, тренды. Используй markdown для форматирования (таблицы, код, списки).
+
+[user_role]
+
+Ответь на вопрос пользователя, используя данные таблицы и схему базы.
+
+[task]
+{QUESTION}
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'QUESTION', 'TABLES']
+============================================================
+Дата и время запроса (2026-07-25 10:12:16):
+[system]
+Ты — эксперт по анализу данных.
+
+=== ТАБЛИЦА С ДАННЫМИ ===
+{TABLE_DATA}
+
+Отвечай на вопросы пользователя о данных в таблице. Анализируй числа, находи закономерности, аномалии, тренды. Используй markdown для форматирования (таблицы, код, списки).
+
+[user]
+Ответь на вопрос пользователя, используя данные таблицы и схему базы.
+
+среднее значение costs
+
+=============================================
+[2026-07-25 10:31:58] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 10:36:52] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-25 10:36:52] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Пользователь: max
+Дата и время: 2026-07-25 10:36:59
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+----------------
+Пользователь: max
+Дата и время: 2026-07-25 10:36:59
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+----------------
+[USER REQUEST] max | баланс по регионам
+[LLM RESPONSE] SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+============================================================
+[2026-07-25 10:36:59] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 10:38:59] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-25 10:39:21] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================

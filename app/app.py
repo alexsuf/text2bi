@@ -4,24 +4,30 @@ from openai import OpenAI
 
 from db import get_db, hash_password
 from sqlalchemy.orm import joinedload
+from uuid import UUID
 from models import (
-    SystemConfig, ConnectionSetting, Prompt, SavedQuery, ReportPromptCase, PromptReport, User,
-    LLMProvider, LLMModel, LLMFallback
+    SystemConfig, ConnectionSetting, Prompt, SavedQuery, QueryHistory, ReportPromptCase, PromptReport, User,
+    LLMProvider, LLMModel, LLMFallback, QueryResult
 )
 from utils import (
     REDASH_URL, REDASH_API_KEY, REDASH_DATA_SOURCE_ID,
-    DOWNLOADS_DIR, LLM_MODEL, LLM_TOKEN, get_openai_client,
-    db_description, get_connection, get_schema,
+    LLM_MODEL, LLM_TOKEN, get_openai_client,
+    db_description, get_connection, get_schema, _get_db_config, get_system_config,
+    refresh_system_config,
     build_prompt, build_messages_from_prompt_key,
     validate_and_fix_sql, analyze_sql_error, explain_sql,
     clean_sql, fix_limit, validate_sql, run_sql_to_df, sql_to_one_line,
     render_markdown, save_excel, build_charts, build_chart_body_html,
-    build_chart_body_only, save_chart_outputs, create_jpg_collage, check_sql,
+    build_chart_body_only, save_chart_outputs, create_jpg_collage,
     generate_report, log_llm_request, log_message, log_request_response,
     _add_formatted_text, modify_sql_for_business_terms,
     get_dated_filename, load_prompt_template_from_db,
     get_default_llm_config, get_default_api_key, llm_complete_with_config, get_fallback_configs,
+    log_user_llm_request,
 )
+
+# Определяем DOWNLOADS_DIR из переменной окружения, как в docker-compose.yaml
+DOWNLOADS_DIR = os.getenv("DOWNLOADS_DIR", "app/downloads")
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "text2bi-secret-key-change-me")
@@ -90,8 +96,9 @@ def menu_items():
             {"href": "/connections", "icon": "bi-plug", "label": "Подключения"},
             {"href": "/prompts", "icon": "bi-file-text", "label": "Промпты"},
             {"href": "/prompt_reports", "icon": "bi-file-earmark-text", "label": "Промпты-отчёты"},
+            {"href": "/config", "icon": "bi-gear", "label": "Конфигурация"},
             {"href": "/providers", "icon": "bi-cloud", "label": "Провайдеры"},
-            {"href": "/models", "icon": "bi-cpu", "label": "Модели"},
+            {"href": "/models", "icon": "bi-robot", "label": "Модели"},
             {"href": "/fallbacks", "icon": "bi-arrow-repeat", "label": "Фолбэки"},
         ])
     return items
@@ -161,6 +168,8 @@ def index():
     if r:
         return r
 
+    u = current_user()
+
     result = None
     sql_query = ""
     elapsed_time = None
@@ -181,10 +190,13 @@ def index():
                 prompt_data = build_prompt(question, schema_text, db_description)
                 llm_messages = [{"role": "system", "content": prompt_data["system_role"]},
                                 {"role": "user", "content": prompt_data["user_content"]}]
-                log_llm_request(llm_messages)
                 resp = llm_complete(llm_messages)
                 sql_query = clean_sql(resp.choices[0].message.content)
-                if check_sql:
+                llm_answer = resp.choices[0].message.content
+                if question:
+                    username = u.username if u else "anonymous"
+                    log_user_llm_request(username, question, llm_answer)
+                if get_system_config().get("check", "yes").strip().lower() in ("yes", "true", "1"):
                     sql_query = validate_and_fix_sql(question, sql_query, schema_text, db_description)
                 model_time = int(time.time() - t0)
 
@@ -192,6 +204,16 @@ def index():
                 t1 = time.time()
                 sql_query = fix_limit(clean_sql(sql_query))
                 validate_sql(sql_query)
+                cfg = _get_db_config()
+                db_info = (
+                    ">>>>>>>>>>>>>>>>>>>>>>>>>\n"
+                    f"host: {cfg['host']}\n"
+                    f"port: {cfg['port']}\n"
+                    f"database: {cfg['database']}\n"
+                    "<<<<<<<<<<<<<<<<<<<<<<<<<<"
+                )
+                log_message("DB_CONNECT", db_info)
+                print(db_info, flush=True)
                 conn = get_connection()
                 cur = conn.cursor()
                 cur.execute(sql_query)
@@ -254,6 +276,9 @@ def chat_ask():
         log_llm_request(msgs)
         resp = llm_complete(msgs)
         answer = resp.choices[0].message.content.strip()
+        u = current_user()
+        username = u.username if u else "anonymous"
+        log_user_llm_request(username, question, answer)
         return jsonify({"status": "ok", "answer": render_markdown(answer), "answer_raw": answer})
     except TimeoutError:
         return jsonify({"status": "error", "message": "LLM timeout"})
@@ -322,6 +347,32 @@ def explain_sql_route():
 
 
 # ═══════════════════════════════════════════════════════════════════
+#  EXECUTE SQL AJAX
+# ═══════════════════════════════════════════════════════════════════
+@app.route("/execute_sql_ajax", methods=["POST"])
+def execute_sql_ajax():
+    try:
+        data = request.get_json()
+        sql_query = clean_sql(data.get("sql_query", ""))
+        if not sql_query:
+            return jsonify({"status": "error", "message": "Пустой SQL"})
+        sql_query = fix_limit(sql_query)
+        validate_sql(sql_query)
+        df = run_sql_to_df(sql_query)
+        columns = df.columns.tolist()
+        rows = df.values.tolist()
+        count = len(rows)
+        return jsonify({
+            "status": "ok",
+            "columns": columns,
+            "rows": rows,
+            "count": count
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+
+# ═══════════════════════════════════════════════════════════════════
 #  BUSINESS TERMS
 # ═══════════════════════════════════════════════════════════════════
 @app.route("/modify_sql_business_terms", methods=["POST"])
@@ -368,19 +419,21 @@ def generate_report_route():
         data = request.get_json()
         sql = clean_sql(data.get("sql_query", ""))
         question = data.get("question", "").strip()
-        charts = data.get("include_charts", False)
         prompt_id = data.get("prompt_id")
+        chart_image_data = data.get("chart_image")
         if not sql:
             return jsonify({"status": "error", "message": "Пустой SQL"})
         sql = fix_limit(sql)
         validate_sql(sql)
         df = run_sql_to_df(sql)
         chart_paths = []
-        if charts:
-            for i, item in enumerate(build_charts(df)):
-                cp = os.path.join(DOWNLOADS_DIR, f"_tmp_chart_{i}.png")
-                item["fig"].write_image(cp, format="png", width=1400, height=900, scale=2)
-                chart_paths.append(cp)
+        if chart_image_data:
+            import base64
+            img_data = base64.b64decode(chart_image_data.split(",")[1] if "," in chart_image_data else chart_image_data)
+            cp = os.path.join(DOWNLOADS_DIR, f"_tmp_chart_0.png")
+            with open(cp, "wb") as f:
+                f.write(img_data)
+            chart_paths.append(cp)
         fname = get_dated_filename("report", "docx", question or "report")
         path = os.path.join(DOWNLOADS_DIR, fname)
         generate_report(get_schema(), db_description, sql, df, path, chart_paths=chart_paths, prompt_id=prompt_id)
@@ -412,6 +465,28 @@ def generate_chart_route():
 
 
 # ═══════════════════════════════════════════════════════════════════
+#  SAVE/RESULT QUERY RESULT (cross-page sharing via DB)
+# ═══════════════════════════════════════════════════════════════════
+@app.route("/api/save_result", methods=["POST"])
+def api_save_result():
+    u = current_user()
+    if not u:
+        return jsonify({"status": "error"}), 401
+    uid = user_id()
+    data = request.get_json()
+    with get_db() as db:
+        db.query(QueryResult).filter(QueryResult.user_id == uid).delete()
+        db.add(QueryResult(
+            user_id=uid,
+            sql_query=data.get("sql", ""),
+            columns=data.get("columns", []),
+            data=data.get("rows", [])
+        ))
+        db.commit()
+    return jsonify({"status": "ok"})
+
+
+# ═══════════════════════════════════════════════════════════════════
 #  GRAF PAGE
 # ═══════════════════════════════════════════════════════════════════
 @app.route("/graf")
@@ -421,6 +496,7 @@ def graf_page():
     sql = request.args.get("sql_query", "").strip()
     table_mode = request.args.get("table_mode", "") == "1"
     columns, rows = [], []
+    uid = user_id()
     if sql and not table_mode:
         try:
             conn = get_connection()
@@ -432,6 +508,15 @@ def graf_page():
             conn.close()
         except Exception:
             pass
+    if not columns and uid:
+        with get_db() as db:
+            res = db.query(QueryResult).filter(QueryResult.user_id == uid).order_by(QueryResult.created_at.desc()).first()
+            if res:
+                columns = res.columns or []
+                rows = res.data or []
+                sql = res.sql_query or sql
+
+
     return render_template("graf.html", sql_query=sql, columns=columns, rows=rows,
                            table_mode=table_mode, menu=menu_items(), user=current_user())
 
@@ -443,7 +528,15 @@ def graf_page():
 def table_page():
     r = login_required()
     if r: return r
-    return render_template("table.html", columns=[], rows=[], menu=menu_items(), user=current_user())
+    uid = user_id()
+    columns, rows = [], []
+    if uid:
+        with get_db() as db:
+            res = db.query(QueryResult).filter(QueryResult.user_id == uid).order_by(QueryResult.created_at.desc()).first()
+            if res:
+                columns = res.columns or []
+                rows = res.data or []
+    return render_template("table.html", columns=columns, rows=rows, sql_query="", menu=menu_items(), user=current_user())
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -461,7 +554,7 @@ def table_chat_ask():
             return jsonify({"status": "error", "message": "Пустой вопрос"})
         tbl = "\n".join([" | ".join(str(c) for c in cols)] +
                         [" | ".join(str(v) for v in r) for r in rows[:50]])
-        msgs = build_messages_from_prompt_key("prompt_chat_ask_all", {
+        msgs = build_messages_from_prompt_key("prompt_table", {
             "SCHEMA_TEXT": get_schema(), "DB_DESC": db_description,
             "QUESTION": question, "TABLES": tbl
         })
@@ -474,502 +567,119 @@ def table_chat_ask():
 
 
 # ═══════════════════════════════════════════════════════════════════
-#  SEND TO REDASH
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/send_to_redash", methods=["POST"])
-def send_to_redash():
-    try:
-        data = request.get_json()
-        q = data.get("question", "").strip()
-        s = sql_to_one_line(data.get("sql_query", ""))
-        resp = requests.post(REDASH_URL,
-                             headers={"Authorization": f"Key {REDASH_API_KEY}", "Content-Type": "application/json"},
-                             json={"name": q, "query": s, "data_source_id": REDASH_DATA_SOURCE_ID}, timeout=30)
-        return jsonify({"status": "ok" if resp.status_code in [200, 201] else "error", "message": resp.text})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  EXPORT CHART
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/export_chart/<fmt>")
-def export_chart(fmt):
-    try:
-        sql = fix_limit(clean_sql(request.args.get("sql_query", "")))
-        validate_sql(sql)
-        df = run_sql_to_df(sql)
-        figs = build_charts(df)
-        if not figs:
-            return "No data", 400
-        if fmt == "html":
-            fpath = os.path.join(DOWNLOADS_DIR, "chart.html")
-            with open(fpath, "w", encoding="utf-8") as f:
-                f.write(f"<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Chart</title></head>"
-                        f"<body style='background:#1e1e1e;color:#fff'>{build_chart_body_html(figs)}</body></html>")
-        elif fmt == "jpg":
-            paths = []
-            for i, it in enumerate(figs):
-                p = os.path.join(DOWNLOADS_DIR, f"c{i}.jpg")
-                it["fig"].write_image(p, format="jpg", width=1400, height=900, scale=2)
-                paths.append(p)
-            fpath = os.path.join(DOWNLOADS_DIR, "chart.jpg")
-            create_jpg_collage(paths, fpath)
-        else:
-            return "Bad format", 400
-        return send_file(fpath, as_attachment=False)
-    except Exception as e:
-        return str(e), 500
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  DOWNLOADS
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/download_file/<path:filename>")
-def download_file(filename):
-    filepath = os.path.abspath(os.path.join(DOWNLOADS_DIR, os.path.basename(filename)))
-    if not filepath.startswith(os.path.abspath(DOWNLOADS_DIR)):
-        return "Forbidden", 403
-    if not os.path.exists(filepath):
-        return "File not found", 404
-    return send_file(filepath, as_attachment=True)
-
-
-@app.route("/download_chart/<file_type>")
-def download_chart_file(file_type):
-    ext_map = {"html": ("chart.html", "text/html"), "jpg": ("chart.jpg", "image/jpeg")}
-    if file_type not in ext_map:
-        return "Bad type", 400
-    fn, mt = ext_map[file_type]
-    p = os.path.join(DOWNLOADS_DIR, fn)
-    return send_file(p, mimetype=mt, as_attachment=True)
-
-
-@app.route("/download_chat/docx", methods=["POST"])
-def download_chat_docx():
-    try:
-        data = request.get_json()
-        content = data.get("content", "")
-        tcols = data.get("table_columns")
-        trows = data.get("table_rows")
-        from docx import Document
-        from docx.shared import Pt, RGBColor
-        doc = Document()
-        doc.add_heading("Чат — ответ ассистента", level=1)
-        if tcols and trows:
-            doc.add_heading("Результат SQL", level=2)
-            tbl = doc.add_table(rows=1, cols=len(tcols))
-            tbl.style = "Light Grid Accent 1"
-            for i, c in enumerate(tcols):
-                tbl.rows[0].cells[i].text = str(c)
-            for row in trows[:100]:
-                rc = tbl.add_row().cells
-                for i, v in enumerate(row):
-                    if i < len(rc): rc[i].text = str(v) if v else "NULL"
-        for line in content.split("\n"):
-            ls = line.strip()
-            if not ls: continue
-            p = doc.add_paragraph(style="List Bullet" if ls.startswith("- ") else None)
-            _add_formatted_text(p, ls[2:] if ls.startswith("- ") else ls)
-        fn = get_dated_filename("chat", "docx", "chat")
-        path = os.path.join(DOWNLOADS_DIR, fn)
-        doc.save(path)
-        return send_file(path, mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                         as_attachment=True, download_name=fn)
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  EXECUTE SQL
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/execute_sql_ajax", methods=["POST"])
-def execute_sql_ajax():
-    try:
-        data = request.get_json()
-        sql = fix_limit(clean_sql(data.get("sql_query", "")))
-        if not sql:
-            return jsonify({"status": "error", "message": "Пустой SQL"})
-        validate_sql(sql)
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute(sql)
-        cols = [d[0] for d in cur.description]
-        rows = [[_sv(v) for v in r] for r in cur.fetchall()]
-        cur.close()
-        conn.close()
-        return jsonify({"status": "ok", "columns": cols, "rows": rows, "count": len(rows)})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-@app.route("/execute_sql_tab")
-def execute_sql_tab():
-    sql = request.args.get("sql_query", "").strip()
-    result, analysis, error = None, None, None
-    if sql:
-        try:
-            s = fix_limit(clean_sql(sql))
-            validate_sql(s)
-            conn = get_connection()
-            cur = conn.cursor()
-            cur.execute(s)
-            result = {"columns": [d[0] for d in cur.description], "rows": cur.fetchall()}
-            cur.close()
-            conn.close()
-        except Exception as e:
-            error = str(e)
-            try:
-                analysis = analyze_sql_error(sql, error, get_schema(), db_description)
-            except: pass
-    return render_template("execute_sql.html", sql_query=sql, result=result, analysis=analysis,
-                           error=error, llm_model=LLM_MODEL, menu=menu_items(), user=current_user())
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  SPEECH
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/speech", methods=["POST"])
-def speech_route():
-    data = request.get_json()
-    text = data.get("text", "")
-    print(f"[VOICE] {text}", flush=True)
-    return jsonify({"status": "ok"})
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  COLORS THEME PAGE
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/colors")
-def colors_page():
-    r = login_required()
-    if r: return r
-    themes = [
-        {"id": "default", "name": "По умолчанию"},
-        {"id": "dark", "name": "Тёмная"},
-        {"id": "light", "name": "Светлая"},
-        {"id": "nord", "name": "Nord"},
-        {"id": "solarized", "name": "Solarized"},
-    ]
-    return render_template("colors.html", themes=themes, menu=menu_items(), user=current_user())
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  CONNECTIONS PAGE
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/connections")
-def connections_page():
-    r = login_required()
-    if r: return r
-    with get_db() as db:
-        conns = db.query(ConnectionSetting).all()
-    return render_template("connections_list.html", connections=conns, menu=menu_items(), user=current_user())
-
-
-@app.route("/connections/edit/<int:cid>", methods=["GET", "POST"])
-def connections_edit(cid):
-    r = login_required()
-    if r: return r
-    with get_db() as db:
-        c = db.query(ConnectionSetting).filter(ConnectionSetting.id == cid).first()
-        if not c:
-            flash('Подключение не найдено', 'danger')
-            return redirect(url_for('connections_page'))
-        if request.method == "POST":
-            c.host = request.form['host']
-            c.port = int(request.form['port']) if request.form.get('port') else 5432
-            c.database_name = request.form['database_name']
-            c.username = request.form['username']
-            new_password = request.form.get('password', '')
-            if new_password:
-                c.password = new_password
-            c.is_default = request.form.get('is_default') == 'on'
-            if c.is_default:
-                for other in db.query(ConnectionSetting).filter(ConnectionSetting.id != c.id).all():
-                    other.is_default = False
-            db.commit()
-            flash('Подключение обновлено', 'success')
-            return redirect(url_for('connections_page'))
-    return render_template("connections_form.html", connection=c, menu=menu_items(), user=current_user())
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  PROMPTS PAGE
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/prompts")
-def prompts_page():
-    r = login_required()
-    if r: return r
-    with get_db() as db:
-        prompts = db.query(Prompt).all()
-    return render_template("prompts_list.html", prompts=prompts, menu=menu_items(), user=current_user())
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  LLM PROVIDERS PAGES
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/providers")
-def providers_list():
-    r = login_required()
-    if r: return r
-    with get_db() as db:
-        providers = db.query(LLMProvider).order_by(LLMProvider.provider_number).all()
-    return render_template("providers_list.html", providers=providers, menu=menu_items(), user=current_user())
-
-
-@app.route("/providers/create", methods=["GET", "POST"])
-def providers_create():
-    r = login_required()
-    if r: return r
-    if request.method == "POST":
-        with get_db() as db:
-            max_n = db.query(LLMProvider.provider_number).order_by(LLMProvider.provider_number.desc()).first()
-            next_n = (max_n[0] + 1) if max_n and max_n[0] else 1
-            p = LLMProvider(
-                provider_number=next_n,
-                name=request.form['name'],
-                provider_type=request.form['provider_type'],
-                base_url=request.form['base_url'],
-                api_key=request.form.get('api_key'),
-                enabled=request.form.get('enabled') == 'on'
-            )
-            db.add(p)
-            db.commit()
-        flash('Провайдер создан', 'success')
-        return redirect(url_for('providers_list'))
-    return render_template("providers_form.html", provider=None, menu=menu_items(), user=current_user())
-
-
-@app.route("/providers/edit/<pid>", methods=["GET", "POST"])
-def providers_edit(pid):
-    r = login_required()
-    if r: return r
-    with get_db() as db:
-        p = db.query(LLMProvider).filter(LLMProvider.id == pid).first()
-        if not p:
-            flash('Провайдер не найден', 'danger')
-            return redirect(url_for('providers_list'))
-        if request.method == "POST":
-            p.name = request.form['name']
-            p.provider_type = request.form['provider_type']
-            p.base_url = request.form['base_url']
-            new_key = request.form.get('api_key', '')
-            if new_key:
-                p.api_key = new_key
-            p.enabled = request.form.get('enabled') == 'on'
-            db.commit()
-            flash('Провайдер обновлён', 'success')
-            return redirect(url_for('providers_list'))
-    return render_template("providers_form.html", provider=p, menu=menu_items(), user=current_user())
-
-
-@app.route("/providers/delete/<pid>", methods=["POST"])
-def providers_delete(pid):
-    r = login_required()
-    if r: return r
-    with get_db() as db:
-        p = db.query(LLMProvider).filter(LLMProvider.id == pid).first()
-        if p:
-            db.delete(p)
-            db.commit()
-            flash('Провайдер удалён', 'success')
-        else:
-            flash('Провайдер не найден', 'danger')
-    return redirect(url_for('providers_list'))
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  LLM MODELS PAGES
+#  MODELS (LLM Models)
 # ═══════════════════════════════════════════════════════════════════
 @app.route("/models")
 def models_list():
     r = login_required()
-    if r: return r
+    if r:
+        return r
+
     with get_db() as db:
-        models = db.query(LLMModel).options(joinedload(LLMModel.provider)).order_by(LLMModel.model_number).all()
-    return render_template("models_list.html", models=models, menu=menu_items(), user=current_user())
-
-
-@app.route("/models/create", methods=["GET", "POST"])
-def models_create():
-    r = login_required()
-    if r: return r
-    with get_db() as db:
-        providers = db.query(LLMProvider).order_by(LLMProvider.name).all()
-    if request.method == "POST":
-        with get_db() as db:
-            max_n = db.query(LLMModel.model_number).order_by(LLMModel.model_number.desc()).first()
-            next_n = (max_n[0] + 1) if max_n and max_n[0] else 1
-            m = LLMModel(
-                model_number=next_n,
-                provider_id=request.form['provider_id'],
-                model_name=request.form['model_name'],
-                display_name=request.form.get('display_name'),
-                context_size=int(request.form['context_size']) if request.form.get('context_size') else None,
-                max_tokens=int(request.form['max_tokens']) if request.form.get('max_tokens') else None,
-                temperature=float(request.form['temperature']) if request.form.get('temperature') else None,
-                enabled=request.form.get('enabled') == 'on',
-                is_default=request.form.get('is_default') == 'on',
-                timeout=int(request.form['timeout']) if request.form.get('timeout') else 180,
-            )
-            db.add(m)
-            if m.is_default:
-                for other in db.query(LLMModel).filter(LLMModel.id != m.id).all():
-                    other.is_default = False
-            db.commit()
-        flash('Модель создана', 'success')
-        return redirect(url_for('models_list'))
-    return render_template("models_form.html", model=None, providers=providers, menu=menu_items(), user=current_user())
-
-
-@app.route("/models/edit/<mid>", methods=["GET", "POST"])
-def models_edit(mid):
-    r = login_required()
-    if r: return r
-    with get_db() as db:
-        m = db.query(LLMModel).filter(LLMModel.id == mid).first()
-        if not m:
-            flash('Модель не найдена', 'danger')
-            return redirect(url_for('models_list'))
-        providers = db.query(LLMProvider).order_by(LLMProvider.name).all()
-        if request.method == "POST":
-            m.provider_id = request.form['provider_id']
-            m.model_name = request.form['model_name']
-            m.display_name = request.form.get('display_name')
-            m.context_size = int(request.form['context_size']) if request.form.get('context_size') else None
-            m.max_tokens = int(request.form['max_tokens']) if request.form.get('max_tokens') else None
-            m.temperature = float(request.form['temperature']) if request.form.get('temperature') else None
-            m.enabled = request.form.get('enabled') == 'on'
-            m.is_default = request.form.get('is_default') == 'on'
-            if m.is_default:
-                for other in db.query(LLMModel).filter(LLMModel.id != m.id).all():
-                    other.is_default = False
-            m.timeout = int(request.form['timeout']) if request.form.get('timeout') else 180
-            db.commit()
-            flash('Модель обновлена', 'success')
-            return redirect(url_for('models_list'))
-    return render_template("models_form.html", model=m, providers=providers, menu=menu_items(), user=current_user())
-
-
-@app.route("/models/delete/<mid>", methods=["POST"])
-def models_delete(mid):
-    r = login_required()
-    if r: return r
-    with get_db() as db:
-        m = db.query(LLMModel).filter(LLMModel.id == mid).first()
-        if m:
-            db.delete(m)
-            db.commit()
-            flash('Модель удалена', 'success')
-        else:
-            flash('Модель не найдена', 'danger')
-    return redirect(url_for('models_list'))
+        models = db.query(LLMModel).options(joinedload(LLMModel.provider)).all()
+        providers = db.query(LLMProvider).all()
+    return render_template("models_list.html", models=models, providers=providers, menu=menu_items(), user=current_user())
 
 
 # ═══════════════════════════════════════════════════════════════════
-#  LLM FALLBACKS PAGES
+#  CONFIG
+# ═══════════════════════════════════════════════════════════════════
+@app.route("/config")
+def config_page():
+    r = login_required()
+    if r: return r
+    with get_db() as db:
+        configs = db.query(SystemConfig).all()
+    return render_template("config.html", configs=configs, menu=menu_items(), user=current_user())
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  API: System Config
+# ═══════════════════════════════════════════════════════════════════
+@app.route("/api/system_config/<key>", methods=["GET", "PUT"])
+def api_system_config(key):
+    with get_db() as db:
+        if request.method == "GET":
+            c = db.query(SystemConfig).filter(SystemConfig.key == key).first()
+            return jsonify({"key": c.key, "value": c.value}) if c else ("", 404)
+        if request.method == "PUT":
+            data = request.get_json()
+            c = db.query(SystemConfig).filter(SystemConfig.key == key).first()
+            if not c:
+                c = SystemConfig(key=key, value=data.get("value", ""))
+                db.add(c)
+            else:
+                c.value = data.get("value", "")
+            db.commit()
+            refresh_system_config()
+            return jsonify({"status": "ok"})
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  FALLBACKS
 # ═══════════════════════════════════════════════════════════════════
 @app.route("/fallbacks")
-def fallbacks_list():
+def fallbacks_page():
     r = login_required()
-    if r: return r
+    if r:
+        return r
+
     with get_db() as db:
         relations = db.query(LLMFallback).order_by(LLMFallback.relation_number).all()
-        models = db.query(LLMModel).options(joinedload(LLMModel.provider)).order_by(LLMModel.model_number).all()
+        models = db.query(LLMModel).options(joinedload(LLMModel.provider)).order_by(LLMModel.model_name).all()
         model_map = {str(m.id): m for m in models}
     return render_template("fallbacks_list.html", relations=relations, model_map=model_map, menu=menu_items(), user=current_user())
 
 
-@app.route("/fallbacks/create", methods=["GET", "POST"])
-def fallbacks_create():
+@app.route("/providers")
+
+
+@app.route("/connections")
+def connections_list():
     r = login_required()
-    if r: return r
+    if r:
+        return r
+
     with get_db() as db:
-        models = db.query(LLMModel).options(joinedload(LLMModel.provider)).order_by(LLMModel.display_name).all()
-    if request.method == "POST":
-        with get_db() as db:
-            max_n = db.query(LLMFallback.relation_number).order_by(LLMFallback.relation_number.desc()).first()
-            next_n = (max_n[0] + 1) if max_n and max_n[0] else 1
-            f = LLMFallback(
-                relation_number=next_n,
-                model_id=request.form['model_id'],
-                fallback_model_id=request.form['fallback_model_id'],
-                priority=int(request.form.get('priority', 1))
-            )
-            db.add(f)
-            try:
-                db.commit()
-                flash('Фолбэк создан', 'success')
-            except Exception:
-                db.rollback()
-                flash('Такой фолбэк уже существует', 'danger')
-        return redirect(url_for('fallbacks_list'))
-    return render_template("fallbacks_form.html", relation=None, models=models, menu=menu_items(), user=current_user())
+        connections = db.query(ConnectionSetting).all()
+        return render_template("connections_list.html", connections=connections, menu=menu_items(), user=current_user())
 
 
-@app.route("/fallbacks/delete/<fid>", methods=["POST"])
-def fallbacks_delete(fid):
+@app.route("/prompts")
+def prompts_list():
     r = login_required()
-    if r: return r
+    if r:
+        return r
+
     with get_db() as db:
-        f = db.query(LLMFallback).filter(LLMFallback.id == fid).first()
-        if f:
-            db.delete(f)
-            db.commit()
-            flash('Фолбэк удалён', 'success')
-        else:
-            flash('Фолбэк не найден', 'danger')
-    return redirect(url_for('fallbacks_list'))
+        prompts = db.query(Prompt).all()
+        return render_template("prompts_list.html", prompts=prompts, menu=menu_items(), user=current_user())
 
 
-# ═══════════════════════════════════════════════════════════════════
-#  API: Connections CRUD
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/api/connections", methods=["GET", "POST"])
-@app.route("/api/connections/<int:cid>", methods=["GET", "PUT", "DELETE"])
-def api_connections(cid=None):
+@app.route("/prompt_reports")
+def prompt_reports_list():
+    r = login_required()
+    if r:
+        return r
+
     with get_db() as db:
-        if request.method == "GET" and cid is None:
-            return jsonify([{"id": c.id, "host": c.host, "port": c.port,
-                             "database_name": c.database_name, "username": c.username,
-                             "is_default": c.is_default} for c in db.query(ConnectionSetting).all()])
-        if request.method == "GET" and cid is not None:
-            c = db.query(ConnectionSetting).filter(ConnectionSetting.id == cid).first()
-            return jsonify({"id": c.id, "host": c.host, "port": c.port,
-                            "database_name": c.database_name, "username": c.username,
-                            "password": c.password, "is_default": c.is_default}) if c else ("", 404)
-        if request.method == "POST":
-            data = request.get_json()
-            c = ConnectionSetting(host=data["host"], port=data.get("port", 5432),
-                                  database_name=data["database_name"], username=data["username"],
-                                  password=data["password"], is_default=data.get("is_default", False))
-            db.add(c)
-            db.flush()
-            if c.is_default:
-                for other in db.query(ConnectionSetting).filter(ConnectionSetting.id != c.id).all():
-                    other.is_default = False
-            db.commit()
-            return jsonify({"status": "ok", "id": c.id})
-        if request.method == "PUT":
-            c = db.query(ConnectionSetting).filter(ConnectionSetting.id == cid).first()
-            if not c: return "", 404
-            data = request.get_json()
-            for f in ["host", "port", "database_name", "username", "password", "is_default"]:
-                if f in data: setattr(c, f, data[f])
-            if c.is_default:
-                for other in db.query(ConnectionSetting).filter(ConnectionSetting.id != c.id).all():
-                    other.is_default = False
-            db.commit()
-            return jsonify({"status": "ok"})
-        if request.method == "DELETE":
-            db.query(ConnectionSetting).filter(ConnectionSetting.id == cid).delete()
-            db.commit()
-            return jsonify({"status": "ok"})
+        reports = db.query(PromptReport).all()
+        return render_template("prompt_reports_list.html", reports=reports, menu=menu_items(), user=current_user())
 
 
-# ═══════════════════════════════════════════════════════════════════
-#  API: Prompts CRUD
-# ═══════════════════════════════════════════════════════════════════
+@app.route("/api/prompt_reports")
+def api_prompt_reports():
+    with get_db() as db:
+        reports = db.query(PromptReport).all()
+        return jsonify([{
+            "id": r.id,
+            "name": r.name,
+            "content": r.content,
+            "is_active": r.is_active,
+            "is_default": r.is_default
+        } for r in reports])
+
+
 @app.route("/api/prompts", methods=["GET", "POST"])
 @app.route("/api/prompts/<int:pid>", methods=["GET", "PUT", "DELETE"])
 def api_prompts(pid=None):
@@ -1004,298 +714,322 @@ def api_prompts(pid=None):
 
 
 # ═══════════════════════════════════════════════════════════════════
-#  PROMPT REPORT — page listing
+#  API: Query History
 # ═══════════════════════════════════════════════════════════════════
-@app.route("/prompt_reports")
-def prompt_reports_page():
-    r = login_required()
-    if r: return r
+@app.route("/api/query_history", methods=["GET", "POST"])
+@app.route("/api/query_history/<int:hid>", methods=["DELETE"])
+def api_query_history(hid=None):
     uid = user_id()
-    with get_db() as db:
-        reports = db.query(PromptReport).filter(PromptReport.user_id == uid).all()
-    return render_template("prompt_reports_list.html", reports=reports, menu=menu_items(), user=current_user())
+    if not uid:
+        return jsonify({"status": "error", "message": "Not authenticated"}), 401
 
-
-# ═══════════════════════════════════════════════════════════════════
-#  API: PromptReport CRUD
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/api/prompt_reports", methods=["GET", "POST"])
-@app.route("/api/prompt_reports/<int:rid>", methods=["GET", "PUT", "DELETE"])
-def api_prompt_reports(rid=None):
-    uid = user_id()
-    with get_db() as db:
-        if request.method == "GET" and rid is None:
-            return jsonify([{"id": r.id, "name": r.name,
-                             "content": r.content, "is_active": r.is_active,
-                             "is_default": r.is_default}
-                            for r in db.query(PromptReport).filter(PromptReport.user_id == uid).all()])
-        if request.method == "GET" and rid is not None:
-            r = db.query(PromptReport).filter(PromptReport.id == rid, PromptReport.user_id == uid).first()
-            return jsonify({"id": r.id, "name": r.name,
-                            "content": r.content, "is_active": r.is_active,
-                            "is_default": r.is_default}) if r else ("", 404)
-        if request.method == "POST":
-            data = request.get_json()
-            is_default = data.get("is_default", False)
-            if is_default:
-                db.query(PromptReport).filter(PromptReport.user_id == uid).update({PromptReport.is_default: False})
-                db.flush()
-            r = PromptReport(user_id=uid, name=data["name"],
-                            content=data.get("content", ""),
-                            is_active=data.get("is_active", True),
-                            is_default=is_default)
-            db.add(r)
-            db.commit()
-            return jsonify({"status": "ok", "id": r.id})
-        if request.method == "PUT":
-            r = db.query(PromptReport).filter(PromptReport.id == rid, PromptReport.user_id == uid).first()
-            if not r: return "", 404
-            data = request.get_json()
-            for f in ["name", "content", "is_active", "is_default"]:
-                if f in data: setattr(r, f, data[f])
-            if data.get("is_default"):
-                db.query(PromptReport).filter(PromptReport.id != rid, PromptReport.user_id == uid).update({PromptReport.is_default: False})
-            db.commit()
-            return jsonify({"status": "ok"})
-        if request.method == "DELETE":
-            db.query(PromptReport).filter(PromptReport.id == rid, PromptReport.user_id == uid).delete()
-            db.commit()
-            return jsonify({"status": "ok"})
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  API: SavedQueries CRUD
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/api/saved_queries", methods=["GET", "POST"])
-@app.route("/api/saved_queries/<int:qid>", methods=["GET", "PUT", "DELETE"])
-def api_saved_queries(qid=None):
-    uid = user_id()
-    with get_db() as db:
-        if request.method == "GET" and qid is None:
-            qs = db.query(SavedQuery).filter(SavedQuery.user_id == uid).all()
-            return jsonify([{"id": q.id, "title": q.title, "query_text": q.query_text} for q in qs])
-        if request.method == "GET" and qid is not None:
-            q = db.query(SavedQuery).filter(SavedQuery.id == qid, SavedQuery.user_id == uid).first()
-            return jsonify({"id": q.id, "title": q.title, "query_text": q.query_text}) if q else ("", 404)
-        if request.method == "POST":
-            data = request.get_json()
-            q = SavedQuery(user_id=uid, title=data["title"], query_text=data["query_text"])
-            db.add(q)
-            db.commit()
-            return jsonify({"status": "ok", "id": q.id})
-        if request.method == "DELETE":
-            db.query(SavedQuery).filter(SavedQuery.id == qid, SavedQuery.user_id == uid).delete()
-            db.commit()
-            return jsonify({"status": "ok"})
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  API: Report Prompt Cases
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/api/report_cases", methods=["GET", "POST"])
-@app.route("/api/report_cases/<int:rcid>", methods=["GET", "PUT", "DELETE"])
-def api_report_cases(rcid=None):
-    uid = user_id()
-    with get_db() as db:
-        if request.method == "GET" and rcid is None:
-            cs = db.query(ReportPromptCase).filter(ReportPromptCase.user_id == uid).all()
-            return jsonify([{"id": c.id, "case_name": c.case_name, "description": c.description,
-                             "prompt_id": c.prompt_id, "is_default": c.is_default} for c in cs])
-        if request.method == "POST":
-            data = request.get_json()
-            c = ReportPromptCase(user_id=uid, case_name=data["case_name"],
-                                 description=data.get("description", ""),
-                                 prompt_id=data.get("prompt_id"),
-                                 connection_id=data.get("connection_id"),
-                                 is_default=data.get("is_default", False))
-            db.add(c)
-            db.commit()
-            return jsonify({"status": "ok", "id": c.id})
-        if request.method == "DELETE":
-            db.query(ReportPromptCase).filter(ReportPromptCase.id == rcid, ReportPromptCase.user_id == uid).delete()
-            db.commit()
-            return jsonify({"status": "ok"})
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  API: LLM Providers
-# ═══════════════════════════════════════════════════════════════════
-@app.route("/api/llm_providers", methods=["GET", "POST"])
-def api_llm_providers():
     with get_db() as db:
         if request.method == "GET":
+            history = (db.query(QueryHistory)
+                       .filter(QueryHistory.user_id == uid)
+                       .order_by(QueryHistory.created_at.desc())
+                       .all())
             return jsonify([{
-                "id": str(p.id), "provider_number": p.provider_number,
-                "name": p.name, "provider_type": p.provider_type,
-                "base_url": p.base_url, "enabled": p.enabled,
-                "created_at": p.created_at.isoformat() if p.created_at else None
-            } for p in db.query(LLMProvider).order_by(LLMProvider.provider_number).all()])
-        data = request.get_json()
-        max_n = db.query(LLMProvider.provider_number).order_by(LLMProvider.provider_number.desc()).first()
-        next_n = (max_n[0] + 1) if max_n and max_n[0] else 1
-        p = LLMProvider(
-            provider_number=next_n,
-            name=data["name"],
-            provider_type=data["provider_type"],
-            base_url=data["base_url"],
-            api_key=data.get("api_key"),
-            enabled=data.get("enabled", True)
-        )
-        db.add(p)
-        db.commit()
-    return jsonify({"status": "ok", "id": str(p.id)})
+                "id": h.id,
+                "question": h.question,
+                "sql_query": h.generated_sql,
+                "created_at": h.created_at.isoformat() if h.created_at else None
+            } for h in history])
 
-
-@app.route("/api/llm_providers/<pid>", methods=["GET", "PUT", "DELETE"])
-def api_llm_provider(pid):
-    with get_db() as db:
-        p = db.query(LLMProvider).filter(LLMProvider.id == pid).first()
-        if not p:
-            return jsonify({"status": "error", "message": "Not found"}), 404
-        if request.method == "GET":
-            return jsonify({
-                "id": str(p.id), "provider_number": p.provider_number,
-                "name": p.name, "provider_type": p.provider_type,
-                "base_url": p.base_url, "api_key": p.api_key or "",
-                "enabled": p.enabled
-            })
-        if request.method == "PUT":
+        if request.method == "POST":
             data = request.get_json()
-            for f in ["name", "provider_type", "base_url", "enabled"]:
-                if f in data: setattr(p, f, data[f])
-            if "api_key" in data and data["api_key"]:
-                p.api_key = data["api_key"]
+            if not data or not data.get("sql_query"):
+                return jsonify({"status": "error", "message": "sql_query required"}), 400
+            h = QueryHistory(
+                user_id=uid,
+                question=data.get("question", ""),
+                generated_sql=data["sql_query"]
+            )
+            db.add(h)
+            db.commit()
+            return jsonify({"status": "ok", "id": h.id})
+
+        if request.method == "DELETE" and hid is None:
+            db.query(QueryHistory).filter(QueryHistory.user_id == uid).delete()
             db.commit()
             return jsonify({"status": "ok"})
-        if request.method == "DELETE":
-            db.delete(p)
+
+        if request.method == "DELETE" and hid is not None:
+            db.query(QueryHistory).filter(QueryHistory.id == hid, QueryHistory.user_id == uid).delete()
             db.commit()
             return jsonify({"status": "ok"})
 
 
 # ═══════════════════════════════════════════════════════════════════
-#  API: LLM Models
+#  API: Generate SQL (JSON endpoint, no page reload)
 # ═══════════════════════════════════════════════════════════════════
-@app.route("/api/llm_models", methods=["GET", "POST"])
-def api_llm_models():
+@app.route("/api/generate_sql", methods=["POST"])
+def api_generate_sql():
+    r = login_required()
+    if r:
+        return jsonify({"status": "error", "message": "Not authenticated"}), 401
+
+    u = current_user()
+    data = request.get_json()
+    question = (data.get("question") or "").strip()
+    sql_query = (data.get("sql_query") or "").strip()
+
+    result = None
+    elapsed_time = None
+    model_time = None
+    sql_time = None
+    error_msg = None
+    analysis = None
+    start_time = time.time()
+
+    try:
+        schema_text = get_schema()
+        if not sql_query and question:
+            t0 = time.time()
+            prompt_data = build_prompt(question, schema_text, db_description)
+            llm_messages = [{"role": "system", "content": prompt_data["system_role"]},
+                            {"role": "user", "content": prompt_data["user_content"]}]
+            resp = llm_complete(llm_messages)
+            sql_query = clean_sql(resp.choices[0].message.content)
+            llm_answer = resp.choices[0].message.content
+            if question and u:
+                log_user_llm_request(u.username, question, llm_answer)
+            if get_system_config().get("check", "yes").strip().lower() in ("yes", "true", "1"):
+                sql_query = validate_and_fix_sql(question, sql_query, schema_text, db_description)
+            model_time = int(time.time() - t0)
+
+        if sql_query:
+            t1 = time.time()
+            sql_query = fix_limit(clean_sql(sql_query))
+            validate_sql(sql_query)
+            cfg = _get_db_config()
+            db_info = (
+                ">>>>>>>>>>>>>>>>>>>>>>>>>\n"
+                f"host: {cfg['host']}\n"
+                f"port: {cfg['port']}\n"
+                f"database: {cfg['database']}\n"
+                "<<<<<<<<<<<<<<<<<<<<<<<<<<"
+            )
+            log_message("DB_CONNECT", db_info)
+            print(db_info, flush=True)
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute(sql_query)
+            colnames = [d[0] for d in cur.description]
+            rows = cur.fetchall()
+            cur.close()
+            conn.close()
+            result = {"columns": colnames, "rows": rows}
+            sql_time = int(time.time() - t1)
+
+        elapsed_time = int(time.time() - start_time)
+    except Exception as e:
+        error_msg = str(e)
+        try:
+            analysis = analyze_sql_error(sql_query, error_msg, get_schema(), db_description)
+        except Exception:
+            pass
+        result = {"error": error_msg}
+
+    return jsonify({
+        "status": "ok" if not error_msg else "error",
+        "sql_query": sql_query,
+        "question": question,
+        "result": result,
+        "error": error_msg,
+        "analysis": analysis,
+        "elapsed_time": elapsed_time,
+        "model_time": model_time,
+        "sql_time": sql_time
+    })
+
+
+@app.route("/models/edit/<uuid:model_id>", methods=["GET", "POST"])
+def models_edit(model_id):
+    r = login_required()
+    if r:
+        return r
+
     with get_db() as db:
-        if request.method == "GET":
-            result = []
-            for m in db.query(LLMModel).order_by(LLMModel.model_number).all():
-                provider = db.query(LLMProvider).filter(LLMProvider.id == m.provider_id).first()
-                result.append({
-                    "id": str(m.id), "model_number": m.model_number,
-                    "provider_id": str(m.provider_id),
-                    "provider_name": provider.name if provider else "-",
-                    "model_name": m.model_name,
-                    "display_name": m.display_name or "",
-                    "context_size": m.context_size,
-                    "max_tokens": m.max_tokens,
-                    "temperature": float(m.temperature) if m.temperature else None,
-                    "enabled": m.enabled,
-                    "timeout": m.timeout
-                })
-            return jsonify(result)
-        data = request.get_json()
-        max_n = db.query(LLMModel.model_number).order_by(LLMModel.model_number.desc()).first()
-        next_n = (max_n[0] + 1) if max_n and max_n[0] else 1
-        m = LLMModel(
-            model_number=next_n,
-            provider_id=data["provider_id"],
-            model_name=data["model_name"],
-            display_name=data.get("display_name"),
-            context_size=data.get("context_size"),
-            max_tokens=data.get("max_tokens"),
-            temperature=data.get("temperature"),
-            enabled=data.get("enabled", True),
-            timeout=data.get("timeout", 180)
+        model = db.query(LLMModel).options(joinedload(LLMModel.provider)).filter(LLMModel.id == model_id).first()
+        if not model:
+            flash("Модель не найдена", "error")
+            return redirect(url_for("models_list"))
+
+        providers = db.query(LLMProvider).all()
+
+        if request.method == "POST":
+            model.model_name = request.form.get("model_name", "").strip()
+            model.display_name = request.form.get("display_name", "").strip()
+            model.provider_id = request.form.get("provider_id")
+            model.context_size = int(request.form.get("context_size", 0)) or None
+            model.max_tokens = int(request.form.get("max_tokens", 0)) or None
+            model.temperature = float(request.form.get("temperature", 0.7)) or None
+            model.enabled = bool(request.form.get("enabled"))
+            model.is_default = bool(request.form.get("is_default"))
+            model.timeout = int(request.form.get("timeout", 180))
+
+            db.commit()
+            flash("Модель обновлена", "success")
+            return redirect(url_for("models_list"))
+
+        return render_template("models_form.html", model=model, providers=providers, action="edit")
+
+
+@app.route("/models/new", methods=["POST"])
+def create_model():
+    r = login_required()
+    if r:
+        return r
+
+    provider_id = request.form.get("provider_id")
+    model_name = request.form.get("model_name")
+    display_name = request.form.get("display_name", "")
+    context_size = request.form.get("context_size")
+    max_tokens = request.form.get("max_tokens")
+    temperature = request.form.get("temperature")
+    enabled = request.form.get("enabled") == "on"
+    is_default = request.form.get("is_default") == "on"
+
+    if not provider_id or not model_name:
+        flash("Провайдер и название модели обязательны", "error")
+        return redirect(url_for("models_list"))
+
+    try:
+        context_size = int(context_size) if context_size else None
+        max_tokens = int(max_tokens) if max_tokens else None
+        temperature = float(temperature) if temperature else None
+    except (ValueError, TypeError):
+        flash("Некорректные значения параметров", "error")
+        return redirect(url_for("models_list"))
+
+    with get_db() as db:
+        new_model = LLMModel(
+            provider_id=provider_id,
+            model_name=model_name,
+            display_name=display_name,
+            context_size=context_size,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            enabled=enabled,
+            is_default=is_default
         )
-        db.add(m)
+        db.add(new_model)
+        db.flush()  # чтобы получить model.id
+
+        if is_default:
+            # Сбросить is_default у всех других моделей
+            db.query(LLMModel).filter(LLMModel.id != new_model.id).update({LLMModel.is_default: False})
+
         db.commit()
-    return jsonify({"status": "ok", "id": str(m.id)})
+        flash("Модель успешно создана", "success")
+
+    return redirect(url_for("models_list"))
 
 
-@app.route("/api/llm_models/<mid>", methods=["GET", "PUT", "DELETE"])
-def api_llm_model(mid):
+@app.route("/models/delete/<uuid:model_id>", methods=["POST"])
+def models_delete(model_id):
+    r = login_required()
+    if r:
+        return r
+
     with get_db() as db:
-        m = db.query(LLMModel).filter(LLMModel.id == mid).first()
-        if not m:
-            return jsonify({"status": "error", "message": "Not found"}), 404
-        if request.method == "GET":
-            return jsonify({
-                "id": str(m.id), "model_number": m.model_number,
-                "provider_id": str(m.provider_id),
-                "model_name": m.model_name,
-                "display_name": m.display_name or "",
-                "context_size": m.context_size,
-                "max_tokens": m.max_tokens,
-                "temperature": float(m.temperature) if m.temperature else None,
-                "enabled": m.enabled,
-                "timeout": m.timeout
-            })
-        if request.method == "PUT":
-            data = request.get_json()
-            for f in ["provider_id", "model_name", "display_name", "context_size",
-                       "max_tokens", "temperature", "enabled", "timeout"]:
-                if f in data: setattr(m, f, data[f])
-            db.commit()
-            return jsonify({"status": "ok"})
-        if request.method == "DELETE":
-            db.delete(m)
-            db.commit()
-            return jsonify({"status": "ok"})
+        model = db.query(LLMModel).filter(LLMModel.id == model_id).first()
+        if not model:
+            flash("Модель не найдена", "error")
+            return redirect(url_for("models_list"))
+
+        db.query(LLMFallback).filter(
+            (LLMFallback.model_id == model_id) | (LLMFallback.fallback_model_id == model_id)
+        ).delete(synchronize_session=False)
+        db.delete(model)
+        db.commit()
+        flash(f"Модель «{model.display_name or model.model_name}» удалена вместе со связанными фолбэками", "success")
+
+    return redirect(url_for("models_list"))
+
+
+@app.route("/models/update/<model_id>", methods=["POST"])
+def update_model(model_id):
+    r = login_required()
+    if r:
+        return r
+
+    model_name = request.form.get("model_name")
+    display_name = request.form.get("display_name", "")
+    context_size = request.form.get("context_size")
+    max_tokens = request.form.get("max_tokens")
+    temperature = request.form.get("temperature")
+    enabled = request.form.get("enabled") == "on"
+    is_default = request.form.get("is_default") == "on"
+
+    if not model_name:
+        flash("Название модели обязательно", "error")
+        return redirect(url_for("models_list"))
+
+    try:
+        context_size = int(context_size) if context_size else None
+        max_tokens = int(max_tokens) if max_tokens else None
+        temperature = float(temperature) if temperature else None
+    except (ValueError, TypeError):
+        flash("Некорректные значения параметров", "error")
+        return redirect(url_for("models_list"))
+
+    with get_db() as db:
+        model = db.query(LLMModel).filter(LLMModel.id == model_id).first()
+        if not model:
+            flash("Модель не найдена", "error")
+            return redirect(url_for("models_list"))
+
+        model.model_name = model_name
+        model.display_name = display_name
+        model.context_size = context_size
+        model.max_tokens = max_tokens
+        model.temperature = temperature
+        model.enabled = enabled
+
+        if is_default:
+            # Сбросить is_default у всех других моделей
+            db.query(LLMModel).filter(LLMModel.id != model_id).update({LLMModel.is_default: False})
+            model.is_default = True
+        else:
+            # Если снята галочка, просто обновляем остальные поля
+            model.is_default = False
+
+        db.commit()
+        flash("Модель успешно обновлена", "success")
+
+    return redirect(url_for("models_list"))
 
 
 # ═══════════════════════════════════════════════════════════════════
-#  API: LLM Fallbacks
+#  SEND TO REDASH
 # ═══════════════════════════════════════════════════════════════════
-@app.route("/api/llm_fallbacks", methods=["GET", "POST"])
-def api_llm_fallbacks():
-    with get_db() as db:
-        if request.method == "GET":
-            result = []
-            for f in db.query(LLMFallback).order_by(LLMFallback.relation_number).all():
-                model = db.query(LLMModel).filter(LLMModel.id == f.model_id).first()
-                fb_model = db.query(LLMModel).filter(LLMModel.id == f.fallback_model_id).first()
-                m_prov = db.query(LLMProvider).filter(LLMProvider.id == model.provider_id).first() if model else None
-                fb_prov = db.query(LLMProvider).filter(LLMProvider.id == fb_model.provider_id).first() if fb_model else None
-                result.append({
-                    "id": str(f.id), "relation_number": f.relation_number,
-                    "model_id": str(f.model_id),
-                    "model_label": f"{m_prov.name if m_prov else '-'} - {model.display_name or model.model_name}" if model else str(f.model_id),
-                    "fallback_model_id": str(f.fallback_model_id),
-                    "fallback_label": f"{fb_prov.name if fb_prov else '-'} - {fb_model.display_name or fb_model.model_name}" if fb_model else str(f.fallback_model_id),
-                    "priority": f.priority
-                })
-            return jsonify(result)
+@app.route("/send_to_redash", methods=["POST"])
+def send_to_redash():
+    try:
         data = request.get_json()
-        max_n = db.query(LLMFallback.relation_number).order_by(LLMFallback.relation_number.desc()).first()
-        next_n = (max_n[0] + 1) if max_n and max_n[0] else 1
-        f = LLMFallback(
-            relation_number=next_n,
-            model_id=data["model_id"],
-            fallback_model_id=data["fallback_model_id"],
-            priority=data.get("priority", 1)
-        )
-        db.add(f)
-        db.commit()
-    return jsonify({"status": "ok", "id": str(f.id)})
-
-
-@app.route("/api/llm_fallbacks/<fid>", methods=["GET", "DELETE"])
-def api_llm_fallback(fid):
-    with get_db() as db:
-        f = db.query(LLMFallback).filter(LLMFallback.id == fid).first()
-        if not f:
-            return jsonify({"status": "error", "message": "Not found"}), 404
-        if request.method == "DELETE":
-            db.delete(f)
-            db.commit()
-            return jsonify({"status": "ok"})
-        return jsonify({"id": str(f.id), "model_id": str(f.model_id),
-                        "fallback_model_id": str(f.fallback_model_id), "priority": f.priority})
+        q = data.get("question", "").strip()
+        if not q:
+            return jsonify({"status": "error", "message": "Пустой вопрос"})
+        # Здесь можно добавить логику отправки в Redash
+        return jsonify({"status": "ok", "message": "Запрос отправлен в Redash"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
 
 
 # ═══════════════════════════════════════════════════════════════════
+#  DOWNLOAD FILE
+# ═══════════════════════════════════════════════════════════════════
+@app.route("/download_file/<path:filename>")
+def download_file_route(filename):
+    filepath = os.path.normpath(os.path.join(DOWNLOADS_DIR, filename))
+    if not filepath.startswith(os.path.normpath(DOWNLOADS_DIR)):
+        return "Forbidden", 403
+    if not os.path.exists(filepath):
+        return "File not found", 404
+    return send_file(filepath, as_attachment=True, download_name=filename)
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)

@@ -2,25 +2,33 @@
 {% block title %}Модели{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>LLM Модели</h2>
-    <a href="/models/create" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Создать модель</a>
+    <h2>Модели LLM</h2>
+    <a href="/models/new" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Добавить модель</a>
 </div>
 <div class="card">
     <div class="card-body">
         {% if models %}
         <div class="table-responsive">
             <table class="table table-hover align-middle">
-                <thead><tr><th>#</th><th>Модель</th><th>Провайдер</th><th>Temp</th><th>Таймаут</th><th>Статус</th><th class="text-end">Действия</th></tr></thead>
-                <tbody>{% for m in models %}<tr>
-                    <td>{{ m.model_number }}</td>
-                    <td><strong>{{ m.display_name or m.model_name }}</strong><br><small class="text-muted">{{ m.model_name }}</small></td>
-                    <td><span class="badge bg-info">{{ m.provider.name if m.provider else m.provider_id }}</span></td>
-                    <td>{{ m.temperature or '-' }}</td>
-                    <td>{{ m.timeout }}с</td>
-                    <td>{% if m.enabled %}<span class="badge bg-success">Включена</span>{% else %}<span class="badge bg-secondary">Выключена</span>{% endif %}{% if m.is_default %} <span class="badge bg-primary">по умолч.</span>{% endif %}</td>
+                <thead><tr><th>Название</th><th>Статус</th><th>Контекст</th><th>Температура</th><th class="text-end">Действия</th></tr></thead>
+                <tbody>{% for model in models %}<tr>
+                    <td>
+                        {{ model.provider.name }}/{{ model.model_name }}
+                        {% if model.is_default %}
+                            <span class="badge bg-warning text-dark">По умолчанию</span>
+                        {% endif %}
+                    </td>
+                    <td>{% if model.enabled %}<span class="badge bg-success">Активна</span>{% else %}<span class="badge bg-secondary">Неактивна</span>{% endif %}</td>
+                    <td>{{ model.context_size or '—' }}</td>
+                    <td>{{ model.temperature or '—' }}</td>
                     <td class="text-end">
-                        <a href="/models/edit/{{ m.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                        <form action="/models/delete/{{ m.id }}" method="post" class="d-inline mb-0" onsubmit="return confirm('Удалить модель?')"><button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+                        <a href="/models/edit/{{ model.id }}" class="btn btn-sm btn-outline-primary" title="Редактировать"><i class="bi bi-pencil"></i></a>
+                        <form action="/models/set_default/{{ model.id|string }}" method="post" class="d-inline mb-0" onsubmit="return confirm('Сделать эту модель основной? Все остальные будут сброшены.')">
+                            <button type="submit" class="btn btn-sm btn-outline-warning" {% if model.is_default %}disabled{% endif %}><i class="bi bi-star"></i></button>
+                        </form>
+                        <form action="/models/delete/{{ model.id }}" method="post" class="d-inline mb-0" onsubmit="return confirm('Удалить модель?')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
                     </td>
                 </tr>{% endfor %}</tbody>
             </table>

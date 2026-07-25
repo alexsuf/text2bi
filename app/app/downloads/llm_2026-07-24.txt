@@ -1,0 +1,994 @@
+[2026-07-24 22:38:20] [BUILD_MSGS]
+template_source: [system_role]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ БАЗЫ ===
+{DB_DESC}
+
+=== SQL-ЗАПРОС ===
+{SQL_QUERY}
+
+=== ДАННЫЕ ===
+{SQL_DATA}
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user_role]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание. 
+
+[task]
+{QUESTION}
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'SQL_QUERY', 'SQL_DATA', 'QUESTION']
+============================================================
+Дата и время запроса (2026-07-24 22:38:20):
+[system]
+Ты — эксперт по SQL PostgreSQL и аналитике данных.
+
+=== СХЕМА БАЗЫ ДАННЫХ ===
+client_contacts: id (integer), client_id (integer), contact_name (text), phone (text)
+clients: id (integer), name (text), type (text), region_id (integer), connected_date (date)
+engineer_contacts: id (integer), engineer_id (integer), phone (text)
+engineer_skills: engineer_id (integer), object_type (text)
+engineers: id (integer), full_name (text), region_id (integer), skill_level (text)
+finance: id (integer), client_id (integer), month (date), revenue (numeric), costs (numeric)
+mart_active_requests: status (text), cnt (bigint)
+mart_client_profit: name (text), revenue (numeric), costs (numeric), profit (numeric)
+mart_engineer_load: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+mart_finance: region (text), month (date), revenue (numeric), costs (numeric), profit (numeric)
+mart_region_load: region (text), requests (bigint), hours (numeric)
+mart_request_types: request_type (text), cnt (bigint), avg_time (numeric)
+mart_requests: region (text), month (timestamp without time zone), request_count (bigint), avg_duration_hours (numeric)
+mart_sla: id (integer), request_type (text), duration_hours (numeric), max_hours (integer), sla_met (integer)
+mart_sla_region: region (text), month (timestamp without time zone), sla_rate (numeric)
+mart_top_engineers: full_name (text), total_requests (bigint), total_hours (numeric), avg_time (numeric)
+regions: id (integer), name (text)
+request_status_history: id (integer), request_id (integer), status (text), changed_at (timestamp without time zone)
+service_objects: id (integer), client_id (integer), type (text), address (text), install_date (date), status (text)
+service_requests: id (integer), object_id (integer), engineer_id (integer), created_at (timestamp without time zone), closed_at (timestamp without time zone), request_type (text), status (text), duration_hours (numeric)
+sla_rules: request_type (text), max_hours (integer)
+
+
+=== ОПИСАНИЕ БАЗЫ ===
+Описание предметной области
+
+Компания занимается сервисным обслуживанием оборудования клиентов:
+банкоматов;
+касс;
+терминалов.
+
+Компания работает в разных регионах и обслуживает:
+банки;
+магазины;
+АЗС.
+
+Система хранит данные о клиентах, оборудовании, инженерах, сервисных заявках, SLA и финансах.
+
+Основные бизнес-сущности
+Регионы
+Таблица: regions
+Справочник регионов обслуживания.
+Поля:
+id — идентификатор региона;
+name — название региона.
+
+Клиенты
+Таблица: clients
+Организации, обслуживаемые сервисной компанией.
+Поля:
+id — идентификатор клиента;
+name — название клиента;
+type — тип клиента:
+Магазины;
+Банки;
+АЗС;
+region_id — регион клиента;
+connected_date — дата подключения клиента.
+
+Связи:
+клиент принадлежит региону;
+клиент имеет сервисные объекты;
+клиент имеет финансовые показатели;
+клиент имеет контактных лиц.
+
+Таблица: client_contacts
+Контактные лица клиентов.
+Поля:
+client_id — клиент;
+contact_name — ФИО контактного лица;
+phone — телефон.
+
+Связи:
+у одного клиента может быть несколько контактов.
+Примеры запросов:
+
+Таблица: service_objects
+Оборудование, установленное у клиентов.
+Типы объектов:
+Банкомат;
+Касса;
+Терминал.
+
+Поля:
+client_id — владелец объекта;
+type — тип оборудования;
+address — адрес установки;
+install_date — дата установки;
+status — состояние:
+Активен;
+Отключен.
+
+Связи:
+объект принадлежит клиенту;
+объект участвует в сервисных заявках.
+
+Инженеры
+Таблица: engineers
+Сотрудники сервисной компании.
+Поля:
+id — идентификатор инженера;
+full_name — ФИО;
+region_id — регион работы;
+skill_level — уровень:
+Junior;
+Middle;
+Senior.
+
+Связи:
+инженер работает в регионе;
+инженер выполняет заявки;
+инженер имеет навыки;
+инженер имеет контактный телефон.
+
+
+Таблица: engineer_contacts
+Телефоны инженеров.
+Поля:
+engineer_id — инженер;
+phone — телефон.
+Навыки инженеров
+
+Таблица: engineer_skills
+Специализация инженеров по типам оборудования.
+Поля:
+engineer_id;
+object_type.
+
+Типы оборудования:
+Банкомат;
+Касса;
+Терминал.
+
+Сервисные заявки
+Таблица: service_requests
+Основная операционная таблица сервисной деятельности.
+Типы заявок:
+Инцидент;
+Плановое ТО.
+
+Статусы:
+Открыта;
+В работе;
+Закрыта.
+
+Поля:
+object_id — объект обслуживания;
+engineer_id — ответственный инженер;
+created_at — дата создания;
+closed_at — дата закрытия;
+request_type — тип заявки;
+status — статус заявки;
+duration_hours — длительность выполнения.
+
+Связи:
+заявка относится к объекту;
+заявка выполняется инженером;
+заявка участвует в SLA аналитике.
+
+Таблица: request_status_history
+История изменения статусов заявок.
+Поля:
+request_id;
+status;
+changed_at.
+
+Используется для:
+аудита;
+анализа времени реакции;
+построения timeline.
+
+Таблица: sla_rules
+Нормативы SLA.
+Поля:
+request_type;
+max_hours.
+
+Правила:
+Инцидент → 24 часа;
+Плановое ТО → 72 часа.
+
+Финансы
+Таблица: finance
+Финансовые показатели клиентов.
+Поля:
+client_id;
+month;
+revenue — выручка;
+costs — расходы.
+
+Вычисляемые показатели:
+прибыль = revenue - costs.
+
+Бизнес-связи между сущностями
+Клиент → Регион
+clients.region_id → regions.id
+Клиент относится к региону
+Объект → Клиент
+service_objects.client_id → clients.id
+Оборудование принадлежит клиенту.
+Заявка → Объект
+service_requests.object_id → service_objects.id
+Заявка создаётся по объекту.
+Заявка → Инженер
+service_requests.engineer_id → engineers.id
+Заявка назначается инженеру.
+Инженер → Регион
+engineers.region_id → regions.id
+Инженер работает в регионе.
+Финансы → Клиент
+finance.client_id → clients.id
+Финансы учитываются по клиенту.
+
+Аналитические витрины (Data Marts)
+mart_requests
+Аналитика заявок по месяцам и регионам.
+Показатели:
+количество заявок;
+средняя длительность.
+
+mart_finance
+Финансовая аналитика.
+Показатели:
+revenue;
+costs;
+profit.
+mart_sla
+
+Проверка выполнения SLA по каждой заявке.
+Поле:
+sla_met:
+1 = SLA выполнен;
+0 = SLA нарушен.
+
+mart_sla_region
+SLA по регионам и месяцам.
+Показатель:
+sla_rate.
+
+mart_engineer_load
+Нагрузка инженеров.
+
+Показатели:
+total_requests;
+total_hours;
+avg_time.
+
+mart_top_engineers
+Рейтинг инженеров по закрытым заявкам.
+
+mart_region_load
+Нагрузка по регионам.
+
+mart_client_profit
+Прибыльность клиентов.
+
+mart_request_types
+Сравнение:
+Инцидентов;
+Планового ТО.
+
+mart_active_requests
+Текущие активные заявки.
+
+Синонимы бизнес-терминов для LLM
+
+Клиенты
+Синонимы:
+заказчики;
+организации;
+контрагенты;
+компании.
+
+Инженеры
+Синонимы:
+сотрудники;
+сервисные инженеры;
+специалисты;
+техперсонал.
+
+Заявки
+Синонимы:
+обращения;
+тикеты;
+инциденты;
+сервисные запросы.
+
+Объекты
+Синонимы:
+оборудование;
+устройства;
+терминалы;
+банкоматы;
+кассы.
+
+SLA
+Синонимы:
+норматив;
+время реакции;
+качество сервиса;
+выполнение SLA.
+
+=== SQL-ЗАПРОС ===
+
+
+=== ДАННЫЕ ===
+
+
+Отвечай на вопросы пользователя о SQL-запросах,
+структуре базы данных и бизнес-логике.
+
+Используй markdown для форматирования ответа
+(заголовки, списки, код, таблицы).
+
+[user]
+Ответь на вопрос пользователя, по возможности используя схему базы данных и описание.
+
+баланс по регионам
+
+=============================================
+Пользователь: alex
+Дата и время: 2026-07-24 22:38:31
+Вопрос: баланс по регионам
+Ответ LLM: Пользователь спрашивает о балансе по регионам. Давайте проанализируем, что это может означать в контексте данной базы данных.
+
+## Возможные интерпретации "баланса по регионам"
+
+В зависимости от контекста бизнес-показателей, "баланс" может означать:
+
+1. **Финансовый баланс** (прибыль/убыток по регионам)
+2. **Нагрузку на инженеров** по регионам
+3. **Количество заявок** по регионам
+
+Рассмотрим SQL-запросы для каждого варианта:
+
+## 1. Финансовый баланс по регионам
+
+```sql
+SELECT 
+    r.name as region,
+    SUM(f.revenue) as total_revenue,
+    SUM(f.costs) as total_costs,
+    SUM(f.revenue - f.costs) as profit
+FROM finance f
+JOIN clients c ON f.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+GROUP BY r.name
+ORDER BY profit DESC;
+```
+
+## 2. Нагрузка по регионам (количество заявок и часы)
+
+```sql
+SELECT 
+    r.name as region,
+    COUNT(sr.id) as total_requests,
+    SUM(sr.duration_hours) as total_hours,
+    AVG(sr.duration_hours) as avg_hours_per_request
+FROM service_requests sr
+JOIN service_objects so ON sr.object_id = so.id
+JOIN clients c ON so.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+WHERE sr.status = 'Закрыена'
+GROUP BY r.name
+ORDER BY total_requests DESC;
+```
+
+## 3. SLA выполнение по регионам
+
+```sql
+SELECT 
+    r.name as region,
+    COUNT(sr.id) as total_requests,
+    SUM(CASE WHEN ms.sla_met = 1 THEN 1 ELSE 0 END) as sla_met_count,
+    ROUND(AVG(ms.sla_met::numeric) * 100, 2) as sla_rate_percent
+FROM service_requests sr
+JOIN service_objects so ON sr.object_id = so.id
+JOIN clients c ON so.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+JOIN mart_sla ms ON sr.id = ms.id
+WHERE sr.status = 'Закрыена'
+GROUP BY r.name
+ORDER BY sla_rate_percent DESC;
+```
+
+## 4. Используя аналитическую витрину mart_finance
+
+```sql
+SELECT 
+    region,
+    revenue,
+    costs,
+    profit,
+    ROUND((profit / revenue) * 100, 2) as profit_margin_percent
+FROM mart_finance
+ORDER BY profit DESC;
+```
+
+## 5. Используя аналитическую витрину mart_region_load
+
+```sql
+SELECT 
+    region,
+    requests,
+    hours,
+    ROUND(hours / requests, 2) as avg_hours_per_request
+FROM mart_region_load
+ORDER BY requests DESC;
+```
+
+**Какой вариант вам нужен?** Пожалуйста, уточните, что именно вы имеете в виду под "балансом по регионам":
+
+- Финансовые показатели (доходы, расходы, прибыль)?
+- Нагрузку на сервисный персонал?
+- Количество обслуживаемых объектов/заявок?
+- Процент выполнения SLA?
+----------------
+Пользователь: alex
+Дата и время: 2026-07-24 22:38:31
+Вопрос: баланс по регионам
+Ответ LLM: Пользователь спрашивает о балансе по регионам. Давайте проанализируем, что это может означать в контексте данной базы данных.
+
+## Возможные интерпретации "баланса по регионам"
+
+В зависимости от контекста бизнес-показателей, "баланс" может означать:
+
+1. **Финансовый баланс** (прибыль/убыток по регионам)
+2. **Нагрузку на инженеров** по регионам
+3. **Количество заявок** по регионам
+
+Рассмотрим SQL-запросы для каждого варианта:
+
+## 1. Финансовый баланс по регионам
+
+```sql
+SELECT 
+    r.name as region,
+    SUM(f.revenue) as total_revenue,
+    SUM(f.costs) as total_costs,
+    SUM(f.revenue - f.costs) as profit
+FROM finance f
+JOIN clients c ON f.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+GROUP BY r.name
+ORDER BY profit DESC;
+```
+
+## 2. Нагрузка по регионам (количество заявок и часы)
+
+```sql
+SELECT 
+    r.name as region,
+    COUNT(sr.id) as total_requests,
+    SUM(sr.duration_hours) as total_hours,
+    AVG(sr.duration_hours) as avg_hours_per_request
+FROM service_requests sr
+JOIN service_objects so ON sr.object_id = so.id
+JOIN clients c ON so.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+WHERE sr.status = 'Закрыена'
+GROUP BY r.name
+ORDER BY total_requests DESC;
+```
+
+## 3. SLA выполнение по регионам
+
+```sql
+SELECT 
+    r.name as region,
+    COUNT(sr.id) as total_requests,
+    SUM(CASE WHEN ms.sla_met = 1 THEN 1 ELSE 0 END) as sla_met_count,
+    ROUND(AVG(ms.sla_met::numeric) * 100, 2) as sla_rate_percent
+FROM service_requests sr
+JOIN service_objects so ON sr.object_id = so.id
+JOIN clients c ON so.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+JOIN mart_sla ms ON sr.id = ms.id
+WHERE sr.status = 'Закрыена'
+GROUP BY r.name
+ORDER BY sla_rate_percent DESC;
+```
+
+## 4. Используя аналитическую витрину mart_finance
+
+```sql
+SELECT 
+    region,
+    revenue,
+    costs,
+    profit,
+    ROUND((profit / revenue) * 100, 2) as profit_margin_percent
+FROM mart_finance
+ORDER BY profit DESC;
+```
+
+## 5. Используя аналитическую витрину mart_region_load
+
+```sql
+SELECT 
+    region,
+    requests,
+    hours,
+    ROUND(hours / requests, 2) as avg_hours_per_request
+FROM mart_region_load
+ORDER BY requests DESC;
+```
+
+**Какой вариант вам нужен?** Пожалуйста, уточните, что именно вы имеете в виду под "балансом по регионам":
+
+- Финансовые показатели (доходы, расходы, прибыль)?
+- Нагрузку на сервисный персонал?
+- Количество обслуживаемых объектов/заявок?
+- Процент выполнения SLA?
+----------------
+[USER REQUEST] alex | баланс по регионам
+[LLM RESPONSE] Пользователь спрашивает о балансе по регионам. Давайте проанализируем, что это может означать в контексте данной базы данных.
+
+## Возможные интерпретации "баланса по регионам"
+
+В зависимости от контекста бизнес-показателей, "баланс" может означать:
+
+1. **Финансовый баланс** (прибыль/убыток по регионам)
+2. **Нагрузку на инженеров** по регионам
+3. **Количество заявок** по регионам
+
+Рассмотрим SQL-запросы для каждого варианта:
+
+## 1. Финансовый баланс по регионам
+
+```sql
+SELECT 
+    r.name as region,
+    SUM(f.revenue) as total_revenue,
+    SUM(f.costs) as total_costs,
+    SUM(f.revenue - f.costs) as profit
+FROM finance f
+JOIN clients c ON f.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+GROUP BY r.name
+ORDER BY profit DESC;
+```
+
+## 2. Нагрузка по регионам (количество заявок и часы)
+
+```sql
+SELECT 
+    r.name as region,
+    COUNT(sr.id) as total_requests,
+    SUM(sr.duration_hours) as total_hours,
+    AVG(sr.duration_hours) as avg_hours_per_request
+FROM service_requests sr
+JOIN service_objects so ON sr.object_id = so.id
+JOIN clients c ON so.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+WHERE sr.status = 'Закрыена'
+GROUP BY r.name
+ORDER BY total_requests DESC;
+```
+
+## 3. SLA выполнение по регионам
+
+```sql
+SELECT 
+    r.name as region,
+    COUNT(sr.id) as total_requests,
+    SUM(CASE WHEN ms.sla_met = 1 THEN 1 ELSE 0 END) as sla_met_count,
+    ROUND(AVG(ms.sla_met::numeric) * 100, 2) as sla_rate_percent
+FROM service_requests sr
+JOIN service_objects so ON sr.object_id = so.id
+JOIN clients c ON so.client_id = c.id
+JOIN regions r ON c.region_id = r.id
+JOIN mart_sla ms ON sr.id = ms.id
+WHERE sr.status = 'Закрыена'
+GROUP BY r.name
+ORDER BY sla_rate_percent DESC;
+```
+
+## 4. Используя аналитическую витрину mart_finance
+
+```sql
+SELECT 
+    region,
+    revenue,
+    costs,
+    profit,
+    ROUND((profit / revenue) * 100, 2) as profit_margin_percent
+FROM mart_finance
+ORDER BY profit DESC;
+```
+
+## 5. Используя аналитическую витрину mart_region_load
+
+```sql
+SELECT 
+    region,
+    requests,
+    hours,
+    ROUND(hours / requests, 2) as avg_hours_per_request
+FROM mart_region_load
+ORDER BY requests DESC;
+```
+
+**Какой вариант вам нужен?** Пожалуйста, уточните, что именно вы имеете в виду под "балансом по регионам":
+
+- Финансовые показатели (доходы, расходы, прибыль)?
+- Нагрузку на сервисный персонал?
+- Количество обслуживаемых объектов/заявок?
+- Процент выполнения SLA?
+============================================================
+[2026-07-24 23:09:22] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-24 23:09:22] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Пользователь: alex
+Дата и время: 2026-07-24 23:09:25
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+----------------
+Пользователь: alex
+Дата и время: 2026-07-24 23:09:25
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+----------------
+[USER REQUEST] alex | баланс по регионам
+[LLM RESPONSE] SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+============================================================
+[2026-07-24 23:09:25] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-24 23:15:42] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-24 23:15:42] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Пользователь: alex
+Дата и время: 2026-07-24 23:15:57
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS revenue,
+    SUM(f.costs) AS costs,
+    SUM(f.revenue - f.costs) AS profit
+FROM 
+    regions r
+JOIN 
+    clients c ON r.id = c.region_id
+JOIN 
+    finance f ON c.id = f.client_id
+GROUP BY 
+    r.name;
+----------------
+Пользователь: alex
+Дата и время: 2026-07-24 23:15:57
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS revenue,
+    SUM(f.costs) AS costs,
+    SUM(f.revenue - f.costs) AS profit
+FROM 
+    regions r
+JOIN 
+    clients c ON r.id = c.region_id
+JOIN 
+    finance f ON c.id = f.client_id
+GROUP BY 
+    r.name;
+----------------
+[USER REQUEST] alex | баланс по регионам
+[LLM RESPONSE] SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS revenue,
+    SUM(f.costs) AS costs,
+    SUM(f.revenue - f.costs) AS profit
+FROM 
+    regions r
+JOIN 
+    clients c ON r.id = c.region_id
+JOIN 
+    finance f ON c.id = f.client_id
+GROUP BY 
+    r.name;
+============================================================
+[2026-07-24 23:15:57] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================
+[2026-07-24 23:16:33] [BUILD_MSGS]
+template_source: [system_role]
+
+Ты — эксперт по анализу данных.
+
+=== ТАБЛИЦА С ДАННЫМИ ===
+{TABLE_DATA}
+
+Отвечай на вопросы пользователя о данных в таблице. Анализируй числа, находи закономерности, аномалии, тренды. Используй markdown для форматирования (таблицы, код, списки).
+
+[user_role]
+
+Ответь на вопрос пользователя, используя данные таблицы и схему базы.
+
+[task]
+{QUESTION}
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'QUESTION', 'TABLES']
+============================================================
+Дата и время запроса (2026-07-24 23:16:33):
+[system]
+Ты — эксперт по анализу данных.
+
+=== ТАБЛИЦА С ДАННЫМИ ===
+{TABLE_DATA}
+
+Отвечай на вопросы пользователя о данных в таблице. Анализируй числа, находи закономерности, аномалии, тренды. Используй markdown для форматирования (таблицы, код, списки).
+
+[user]
+Ответь на вопрос пользователя, используя данные таблицы и схему базы.
+
+какие таблицы есть в базе?
+
+=============================================
+[2026-07-24 23:44:53] [BUILD_PROMPT]
+EXAMPLES: загружено 295 строк (limit=10)
+============================================================
+[2026-07-24 23:44:53] [BUILD_MSGS]
+template_source: [system_role]
+Ты генерируешь SQL
+
+[user_role]
+Ты — эксперт по SQL PostgreSQL.
+
+[task]
+=== СХЕМА ===
+{SCHEMA_TEXT}
+
+=== ОПИСАНИЕ ===
+{DB_DESC}
+
+=== ПРИМЕРЫ ===
+{EXAMPLES}
+
+=== ПРАВИЛА ===
+1. Только SELECT
+2. Только существующие таблицы
+3. Только существующие поля
+4. Без комментариев
+5. PostgreSQL syntax only
+6. Не использовать вымышленные aliases
+
+Сначала:
+1. Определи нужные таблицы
+2. Определи нужные поля
+3. Проверь существование полей
+4. Проверь агрегации
+5. Проверь JOIN
+6. Проверь GROUP BY
+7. Проверь aliases
+8. Только после этого сформируй SQL
+
+Верни ТОЛЬКО SQL.
+
+=== ВОПРОС ===
+{QUESTION}
+
+SQL:
+placeholders keys: ['SCHEMA_TEXT', 'DB_DESC', 'EXAMPLES', 'QUESTION']
+============================================================
+Пользователь: alex
+Дата и время: 2026-07-24 23:44:56
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+----------------
+Пользователь: alex
+Дата и время: 2026-07-24 23:44:56
+Вопрос: баланс по регионам
+Ответ LLM: SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+----------------
+[USER REQUEST] alex | баланс по регионам
+[LLM RESPONSE] SELECT 
+    r.name AS region,
+    SUM(f.revenue) AS total_revenue,
+    SUM(f.costs) AS total_costs,
+    SUM(f.revenue - f.costs) AS balance
+FROM 
+    finance f
+JOIN 
+    clients c ON f.client_id = c.id
+JOIN 
+    regions r ON c.region_id = r.id
+GROUP BY 
+    r.name
+ORDER BY 
+    r.name
+============================================================
+[2026-07-24 23:44:56] [DB_CONNECT]
+>>>>>>>>>>>>>>>>>>>>>>>>>
+host: host.docker.internal
+port: 1111
+database: dash
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+============================================================

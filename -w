@@ -1,6 +1,13 @@
-{% extends "base.html" %}
-{% block title %}Запрос{% endblock %}
-{% block extra_css %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text2BI — Запрос</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css?v=5">
+    <style>
+        
 .main-layout { display:flex; gap:20px; align-items:flex-start; }
 .history-panel { width:300px; flex-shrink:0; background:var(--card-bg); border:none; border-radius:10px; padding:12px 16px; box-shadow:var(--card-shadow); display:flex; flex-direction:column; max-height:calc(100vh - 100px); }
 .history-panel h3 { color:var(--text-accent); font-size:14px; margin:0 0 8px; flex-shrink:0; }
@@ -42,9 +49,101 @@
 .info-bar { color:var(--text-secondary); font-size:13px; font-weight:600; margin-top:8px; display:flex; gap:20px; }
 .analysis-box { background:var(--bg-surface); border:1px solid var(--border-error); border-radius:10px; padding:16px; margin-top:12px; color:var(--text-error); box-shadow:var(--card-shadow); }
 .analysis-box h3 { margin-top:0; font-size:14px; }
-{% endblock %}
 
-{% block content %}
+    </style>
+    
+</head>
+<body>
+    <div id="spa-loading" class="loading-overlay">
+        <div class="loading-panel">
+            <div class="typing"><span></span><span></span><span></span></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
+    </div>
+
+    <!-- TOP BAR — full width, sidebar-bg color -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <i class="bi bi-bar-chart-fill"></i> Text2BI
+            <span class="top-bar-user">alex</span>
+        </div>
+        <div class="top-bar-right">
+            <span class="model-name">Модель: laguna-xs-2.1</span>
+            <div class="theme-selector">
+                <label for="themeSelect">Тема:</label>
+                <select id="themeSelect">
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                    <option value="nord">Nord</option>
+                    <option value="solarized">Solarized</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid" style="margin-top:52px;">
+        <div class="row">
+            <nav class="col-md-2 d-none d-md-block sidebar" style="max-width:200px;">
+                <nav class="nav flex-column" style="margin-top:10px;">
+                    
+                    <a class="nav-link active" href="/" data-nav="true">
+                        <i class="bi bi-search"></i> Запрос
+                    </a>
+                    
+                    <a class="nav-link " href="/chat" data-nav="true">
+                        <i class="bi bi-chat-dots"></i> Чат-бот
+                    </a>
+                    
+                    <a class="nav-link " href="/graf" data-nav="true" target="_blank">
+                        <i class="bi bi-bar-chart"></i> График
+                    </a>
+                    
+                    <a class="nav-link " href="/table" data-nav="true">
+                        <i class="bi bi-table"></i> Таблица
+                    </a>
+                    
+                    <a class="nav-link " href="/connections" data-nav="true">
+                        <i class="bi bi-plug"></i> Подключения
+                    </a>
+                    
+                    <a class="nav-link " href="/prompts" data-nav="true">
+                        <i class="bi bi-file-text"></i> Промпты
+                    </a>
+                    
+                    <a class="nav-link " href="/prompt_reports" data-nav="true">
+                        <i class="bi bi-file-earmark-text"></i> Промпты-отчёты
+                    </a>
+                    
+                    <a class="nav-link " href="/config" data-nav="true">
+                        <i class="bi bi-gear"></i> Конфигурация
+                    </a>
+                    
+                    <a class="nav-link " href="/providers" data-nav="true">
+                        <i class="bi bi-cloud"></i> Провайдеры
+                    </a>
+                    
+                    <a class="nav-link " href="/models" data-nav="true">
+                        <i class="bi bi-robot"></i> Модели
+                    </a>
+                    
+                    <a class="nav-link " href="/fallbacks" data-nav="true">
+                        <i class="bi bi-arrow-repeat"></i> Фолбэки
+                    </a>
+                    
+                    
+                    <div class="mt-auto pt-3">
+                        <a class="nav-link text-warning" href="/logout" data-nav="true">
+                            <i class="bi bi-box-arrow-right"></i> Выйти
+                        </a>
+                    </div>
+                    
+                </nav>
+            </nav>
+            <main class="col-md-10 ms-sm-auto px-md-4 py-4" style="margin-left:200px;">
+                
+                    
+                
+                <div id="spa-content">
 <div class="main-layout">
     <div class="history-panel">
         <h3>📜 История запросов</h3>
@@ -55,27 +154,79 @@
     <div class="content-area">
         <div class="header-row">
             <h2>Генерация SQL-запроса</h2>
-            <span style="color:var(--text-muted);font-size:13px;">Модель: {{ llm_model }}</span>
+            <span style="color:var(--text-muted);font-size:13px;">Модель: </span>
         </div>
 
         <div class="card">
             <form method="POST" id="queryForm">
                 <label>Вопрос на естественном языке</label>
                 <div class="query-box">
-                    <textarea name="question" id="questionInput" rows="2" placeholder="Например: покажи топ-10 регионов по продажам за последний месяц">{{ question }}</textarea>
+                    <textarea name="question" id="questionInput" rows="2" placeholder="Например: покажи топ-10 регионов по продажам за последний месяц"></textarea>
                     <button type="submit" class="btn btn-primary" style="height:60px; min-width:140px;">Сгенерировать SQL</button>
                 </div>
-                {% if sql_query %}
-                <textarea class="sql-block" readonly data-original="{{ sql_query }}">{{ sql_query }}</textarea>
+                
+                <textarea class="sql-block" readonly data-original="SELECT 
+    c.name AS client_name, 
+    cc.contact_name, 
+    cc.phone, 
+    AVG(sr.duration_hours) AS average_repair_time,
+    f.revenue,
+    f.costs,
+    (f.revenue - f.costs) AS profit
+FROM 
+    clients c
+JOIN 
+    service_objects so ON c.id = so.client_id
+JOIN 
+    service_requests sr ON so.id = sr.object_id
+JOIN 
+    client_contacts cc ON c.id = cc.client_id
+LEFT JOIN 
+    finance f ON c.id = f.client_id AND f.month = (
+        SELECT MAX(month) FROM finance WHERE client_id = c.id
+    )
+WHERE 
+    so.type = &#39;Банкомат&#39;
+GROUP BY 
+    c.id, c.name, cc.contact_name, cc.phone, f.revenue, f.costs
+ORDER BY 
+    profit DESC
+LIMIT 5">SELECT 
+    c.name AS client_name, 
+    cc.contact_name, 
+    cc.phone, 
+    AVG(sr.duration_hours) AS average_repair_time,
+    f.revenue,
+    f.costs,
+    (f.revenue - f.costs) AS profit
+FROM 
+    clients c
+JOIN 
+    service_objects so ON c.id = so.client_id
+JOIN 
+    service_requests sr ON so.id = sr.object_id
+JOIN 
+    client_contacts cc ON c.id = cc.client_id
+LEFT JOIN 
+    finance f ON c.id = f.client_id AND f.month = (
+        SELECT MAX(month) FROM finance WHERE client_id = c.id
+    )
+WHERE 
+    so.type = &#39;Банкомат&#39;
+GROUP BY 
+    c.id, c.name, cc.contact_name, cc.phone, f.revenue, f.costs
+ORDER BY 
+    profit DESC
+LIMIT 5</textarea>
                 <div class="btn-row" style="margin-top:10px;">
                     <button type="button" class="btn btn-outline" onclick="toggleSqlEdit()">Редактировать SQL</button>
                     <button type="button" class="btn btn-primary" onclick="executeSql()">Выполнить SQL</button>
                 </div>
-                {% endif %}
+                
             </form>
         </div>
 
-        {% if result and result.rows is defined %}
+        
         <div class="card" id="resultCard">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <h3 style="color:var(--text-success); margin:0; font-size:15px;">Результат</h3>
@@ -88,27 +239,21 @@
                     <button class="btn btn-blue" onclick="downloadExcel()">Excel</button>
                 </div>
             </div>
-            <div class="results"><table><thead><tr>{% for c in result.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead><tbody>{% for row in result.rows %}<tr>{% for v in row %}<td>{{ v }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
-            <div class="info-bar"><span>Строк: {{ result.rows|length }}</span><span>LLM: {{ model_time if model_time is not none else 0 }} сек</span><span>SQL: {{ sql_time if sql_time is not none else 0 }} сек</span></div>
+            <div class="results"><table><thead><tr><th>client_name</th><th>contact_name</th><th>phone</th><th>average_repair_time</th><th>revenue</th><th>costs</th><th>profit</th></tr></thead><tbody><tr><td>Клиент 26</td><td>Иванов Иван Иванович</td><td>+7 (812) 937-64-56</td><td>30.1563291139240506</td><td>179560.94</td><td>39278.60</td><td>140282.34</td></tr><tr><td>Клиент 14</td><td>Кузнецов Дмитрий Андреевич</td><td>+7 (812) 358-50-20</td><td>30.4468478260869565</td><td>177029.68</td><td>40536.68</td><td>136493.00</td></tr><tr><td>Клиент 40</td><td>Васильев Андрей Олегович</td><td>+7 (812) 856-28-45</td><td>29.2638181818181818</td><td>172041.68</td><td>35690.09</td><td>136351.59</td></tr><tr><td>Клиент NEW 46</td><td>Лебедев Михаил Сергеевич</td><td>+7 (846) 891-25-24</td><td>43.7760000000000000</td><td>166326.54</td><td>31491.76</td><td>134834.78</td></tr><tr><td>Клиент 31</td><td>Орлов Константин Евгеньевич</td><td>+7 (495) 734-21-64</td><td>26.6335064935064935</td><td>173323.85</td><td>47438.97</td><td>125884.88</td></tr></tbody></table></div>
+            <div class="info-bar"><span>Строк: 5</span><span>LLM: 2 сек</span><span>SQL: 0 сек</span></div>
         </div>
-        {% elif result and result.error is defined %}
-        <div class="card" id="errorCard">
-            <div class="analysis-box"><h3>Ошибка</h3><p>{{ result.error }}</p>{% if analysis %}<div style="margin-top:10px; color:var(--text-primary);">{{ analysis|safe }}</div>{% endif %}</div>
-        </div>
-        {% endif %}
+        
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
 <script>
-var sqlQuery = decodeURIComponent('{{ sql_query|urlencode|safe }}');
-var question = decodeURIComponent('{{ question|urlencode|safe }}');
-var resultCols = {% if result and result.columns %}{{ result.columns|tojson }}{% else %}[]{% endif %};
-var resultRows = {% if result and result.rows %}{{ result.rows|tojson }}{% else %}[]{% endif %};
+var sqlQuery = decodeURIComponent('SELECT%20%0A%20%20%20%20c.name%20AS%20client_name%2C%20%0A%20%20%20%20cc.contact_name%2C%20%0A%20%20%20%20cc.phone%2C%20%0A%20%20%20%20AVG%28sr.duration_hours%29%20AS%20average_repair_time%2C%0A%20%20%20%20f.revenue%2C%0A%20%20%20%20f.costs%2C%0A%20%20%20%20%28f.revenue%20-%20f.costs%29%20AS%20profit%0AFROM%20%0A%20%20%20%20clients%20c%0AJOIN%20%0A%20%20%20%20service_objects%20so%20ON%20c.id%20%3D%20so.client_id%0AJOIN%20%0A%20%20%20%20service_requests%20sr%20ON%20so.id%20%3D%20sr.object_id%0AJOIN%20%0A%20%20%20%20client_contacts%20cc%20ON%20c.id%20%3D%20cc.client_id%0ALEFT%20JOIN%20%0A%20%20%20%20finance%20f%20ON%20c.id%20%3D%20f.client_id%20AND%20f.month%20%3D%20%28%0A%20%20%20%20%20%20%20%20SELECT%20MAX%28month%29%20FROM%20finance%20WHERE%20client_id%20%3D%20c.id%0A%20%20%20%20%29%0AWHERE%20%0A%20%20%20%20so.type%20%3D%20%27%D0%91%D0%B0%D0%BD%D0%BA%D0%BE%D0%BC%D0%B0%D1%82%27%0AGROUP%20BY%20%0A%20%20%20%20c.id%2C%20c.name%2C%20cc.contact_name%2C%20cc.phone%2C%20f.revenue%2C%20f.costs%0AORDER%20BY%20%0A%20%20%20%20profit%20DESC%0ALIMIT%205');
+var question = decodeURIComponent('');
+var resultCols = ["client_name", "contact_name", "phone", "average_repair_time", "revenue", "costs", "profit"];
+var resultRows = [["\u041a\u043b\u0438\u0435\u043d\u0442 26", "\u0418\u0432\u0430\u043d\u043e\u0432 \u0418\u0432\u0430\u043d \u0418\u0432\u0430\u043d\u043e\u0432\u0438\u0447", "+7 (812) 937-64-56", "30.1563291139240506", "179560.94", "39278.60", "140282.34"], ["\u041a\u043b\u0438\u0435\u043d\u0442 14", "\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0414\u043c\u0438\u0442\u0440\u0438\u0439 \u0410\u043d\u0434\u0440\u0435\u0435\u0432\u0438\u0447", "+7 (812) 358-50-20", "30.4468478260869565", "177029.68", "40536.68", "136493.00"], ["\u041a\u043b\u0438\u0435\u043d\u0442 40", "\u0412\u0430\u0441\u0438\u043b\u044c\u0435\u0432 \u0410\u043d\u0434\u0440\u0435\u0439 \u041e\u043b\u0435\u0433\u043e\u0432\u0438\u0447", "+7 (812) 856-28-45", "29.2638181818181818", "172041.68", "35690.09", "136351.59"], ["\u041a\u043b\u0438\u0435\u043d\u0442 NEW 46", "\u041b\u0435\u0431\u0435\u0434\u0435\u0432 \u041c\u0438\u0445\u0430\u0438\u043b \u0421\u0435\u0440\u0433\u0435\u0435\u0432\u0438\u0447", "+7 (846) 891-25-24", "43.7760000000000000", "166326.54", "31491.76", "134834.78"], ["\u041a\u043b\u0438\u0435\u043d\u0442 31", "\u041e\u0440\u043b\u043e\u0432 \u041a\u043e\u043d\u0441\u0442\u0430\u043d\u0442\u0438\u043d \u0415\u0432\u0433\u0435\u043d\u044c\u0435\u0432\u0438\u0447", "+7 (495) 734-21-64", "26.6335064935064935", "173323.85", "47438.97", "125884.88"]];
 var resultCount = resultRows.length;
-var modelTime = {{ model_time if model_time is not none else 0 }};
-var sqlTime = {{ sql_time if sql_time is not none else 0 }};
+var modelTime = 2;
+var sqlTime = 0;
 var loadingOverlay = null;
 
 function getOrCreateLoading() {
@@ -301,15 +446,13 @@ function updateResultTable(result, mt, st) {
         '<div class="btn-row">' +
         '<button class="btn btn-blue" onclick="openChat(sqlQuery)">Чат</button>' +
         '<button class="btn btn-blue" onclick="openGraf(sqlQuery)">График</button>' +
-        '<button class="btn btn-blue" onclick="openTable()">Таблица</button>' +
+        '<button class="btn btn-blue" onclick="openTable(sqlQuery)">Таблица</button>' +
         '<button class="btn btn-blue" onclick="generateReport()">Отчёт</button>' +
         '<button class="btn btn-blue" onclick="sendToRedash()">Послать в BI</button>' +
         '<button class="btn btn-blue" onclick="downloadExcel()">Excel</button>' +
         '</div></div>' +
         '<div class="results"><table><thead><tr>' + headers + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
         '<div class="info-bar"><span>Строк: ' + resultCount + '</span><span>LLM: ' + modelTime + ' сек</span><span>SQL: ' + sqlTime + ' сек</span></div>';
-
-    saveCurrentResult(sqlQuery, resultCols, resultRows);
 }
 
 function updateErrorBlock(err, analysis) {
@@ -333,32 +476,40 @@ function esc(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function saveCurrentResult(sql, cols, rows) {
-    if (!cols || !cols.length) return;
-    localStorage.setItem('chatTableData', JSON.stringify({sql_query: sql, columns: cols, rows: rows}));
-    fetch('/api/save_result', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({sql: sql, columns: cols, rows: rows})
-    }).catch(function(e) { console.error('saveCurrentResult error:', e); });
-}
-
 // ── Bootstrap ──────────────────────────────────────────────────
 loadHistory();
 
-{% if sql_query and not (result and result.rows is defined) %}
-setTimeout(saveHistory, 500);
-{% endif %}
+
 
 // ── Existing functions ─────────────────────────────────────────
 function openChat(sql) { window.open('/chat?sql_query=' + encodeURIComponent(sql), '_blank'); }
-function openGraf(sql) {
-    if (window.SPA) window.SPA.navigate('/graf?sql_query=' + encodeURIComponent(sql));
-    else window.location.href = '/graf?sql_query=' + encodeURIComponent(sql);
+async function openGraf(sql) {
+    const tbl = document.querySelector('.results table');
+    if (tbl) {
+        const hdrs = tbl.querySelectorAll('thead th');
+        const cols = Array.from(hdrs).map(function(th) { return th.textContent; });
+        const bd = tbl.querySelectorAll('tbody tr');
+        const rows = Array.from(bd).map(function(tr) {
+            return Array.from(tr.querySelectorAll('td')).map(function(td) { return td.textContent; });
+        });
+        localStorage.setItem('chatTableData', JSON.stringify({sql_query: sql, columns: cols, rows: rows}));
+        await fetch('/api/save_result', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql: sql, columns: cols, rows: rows})});
+    }
+    window.open('/graf?sql_query=' + encodeURIComponent(sql), '_blank');
 }
-function openTable() {
-    if (window.SPA) window.SPA.navigate('/table');
-    else window.location.href = '/table';
+async function openTable(sql) {
+    const tbl = document.querySelector('.results table');
+    if (tbl) {
+        const hdrs = tbl.querySelectorAll('thead th');
+        const cols = Array.from(hdrs).map(function(th) { return th.textContent; });
+        const bd = tbl.querySelectorAll('tbody tr');
+        const rows = Array.from(bd).map(function(tr) {
+            return Array.from(tr.querySelectorAll('td')).map(function(td) { return td.textContent; });
+        });
+        localStorage.setItem('chatTableData', JSON.stringify({sql_query: sql, columns: cols, rows: rows}));
+        await fetch('/api/save_result', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql: sql, columns: cols, rows: rows})});
+    }
+    window.open('/table', '_blank');
 }
 async function generateReport() {
     const btn = event.target; btn.textContent='...'; btn.disabled=true;
@@ -433,4 +584,28 @@ function toggleSqlEdit() {
 }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-{% endblock %}
+</div>
+            </main>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/spa.js?v=1"></script>
+    <script>
+        (function() {
+            const themeSelect = document.getElementById('themeSelect');
+            function setTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('app-theme', theme);
+            }
+            const saved = localStorage.getItem('app-theme') || 'dark';
+            setTheme(saved);
+            if (themeSelect) {
+                themeSelect.value = saved;
+                themeSelect.addEventListener('change', function() {
+                    setTheme(this.value);
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

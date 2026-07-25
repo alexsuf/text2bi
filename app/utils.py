@@ -11,6 +11,7 @@ from openai import OpenAI
 import requests
 from PIL import Image
 import markdown
+import ssl
 
 from db import get_db
 from models import (
@@ -27,14 +28,6 @@ from models import (
 # =========================
 # СИСТЕМНЫЙ КОНФИГ (ранее config.txt)
 # =========================
-def _get_system_config_value(key, default=None):
-    with get_db() as db:
-        row = db.query(SystemConfig).filter(SystemConfig.key == key).first()
-        if row:
-            return row.value
-    return default
-
-
 def _load_system_config():
     keys = [
         "redash",
@@ -59,52 +52,76 @@ def _load_system_config():
     return data
 
 
-_system_config_cache = {"text": None, "timestamp": 0}
-
-
 def get_system_config():
-    global _system_config_cache
-    now = time.time()
-    if _system_config_cache["text"] and (now - _system_config_cache["timestamp"]) < 60:
-        return _system_config_cache["text"]
-    _system_config_cache["text"] = _load_system_config()
-    _system_config_cache["timestamp"] = now
-    return _system_config_cache["text"]
+    try:
+        return _load_system_config()
+    except Exception:
+        return {}
 
 
-_system_config = get_system_config()
+# Все константы теперь вычисляются на лету
+def get_redash_config():
+    try:
+        cfg = get_system_config()
+        api_key = cfg.get("redash", "").strip()
+        url = cfg.get("redash_url", "http://dash_server:5000/api/queries").strip()
+        try:
+            datasource_id = int(cfg.get("redash_datasource_id", 1))
+        except (TypeError, ValueError):
+            datasource_id = 1
+        return api_key, url, datasource_id
+    except Exception:
+        return "", "http://dash_server:5000/api/queries", 1
 
-REDASH_API_KEY = _system_config.get("redash", "").strip()
-REDASH_URL = _system_config.get("redash_url", "http://dash_server:5000/api/queries").strip()
-try:
-    REDASH_DATA_SOURCE_ID = int(_system_config.get("redash_datasource_id", 1))
-except (TypeError, ValueError):
-    REDASH_DATA_SOURCE_ID = 1
+REDASH_API_KEY, REDASH_URL, REDASH_DATA_SOURCE_ID = get_redash_config()
 
-try:
-    QUERY_LIMIT = max(100, int(_system_config.get("query_limit", 1000)))
-except (TypeError, ValueError):
-    QUERY_LIMIT = 1000
+def get_query_limit():
+    cfg = get_system_config()
+    try:
+        return max(100, int(cfg.get("query_limit", 1000)))
+    except (TypeError, ValueError):
+        return 1000
 
-LLM_TOKEN = _system_config.get("bothub", "").strip()
-LLM_MODEL = _system_config.get("LLM", "gpt-4.1-nano").strip()
+QUERY_LIMIT = get_query_limit()
 
-_openai_client = None
-_llm_config_cache = {"data": None, "timestamp": 0}
+def get_llm_token():
+    cfg = get_system_config()
+    return cfg.get("bothub", "").strip()
 
+LLM_TOKEN = get_llm_token()
+
+def get_llm_model():
+    cfg = get_system_config()
+    return cfg.get("LLM", "gpt-4.1-nano").strip()
+
+LLM_MODEL = get_llm_model()
+
+def get_db_description():
+    cfg = get_system_config()
+    desc = cfg.get("db_desc", "")
+    if desc:
+        return desc
+    return ""
+
+def get_check_sql():
+    cfg = get_system_config()
+    check_raw = cfg.get("check", "yes").strip().lower()
+    return check_raw in ("yes", "true", "1")
+
+check_sql = get_check_sql()
+
+# Удалены все кеширующие переменные: _system_config_cache, _llm_config_cache, _schema_cache
+
+def refresh_system_config():
+    pass
 
 def get_default_llm_config():
-    global _llm_config_cache
-    now = time.time()
-    if _llm_config_cache["data"] and (now - _llm_config_cache["timestamp"]) < 60:
-        return _llm_config_cache["data"]
-    
     with get_db() as db:
         model = db.query(LLMModel).filter(LLMModel.is_default == True, LLMModel.enabled == True).first()
         if model:
             provider = db.query(LLMProvider).filter(LLMProvider.id == model.provider_id, LLMProvider.enabled == True).first()
             if provider:
-                _llm_config_cache["data"] = {
+                return {
                     "model_id": str(model.id),
                     "model_name": model.model_name,
                     "api_key": provider.api_key,
@@ -112,10 +129,9 @@ def get_default_llm_config():
                     "temperature": float(model.temperature) if model.temperature else None,
                     "timeout": model.timeout or 120,
                 }
-                _llm_config_cache["timestamp"] = now
-                return _llm_config_cache["data"]
     
-    _llm_config_cache["data"] = {
+    log_message("LLM_FALLBACK", "Нет активной модели с is_default=True. Использую fallback: LLM_MODEL")
+    return {
         "model_id": None,
         "model_name": LLM_MODEL,
         "api_key": LLM_TOKEN,
@@ -123,8 +139,6 @@ def get_default_llm_config():
         "temperature": None,
         "timeout": 120,
     }
-    _llm_config_cache["timestamp"] = now
-    return _llm_config_cache["data"]
 
 
 def get_llm_config_for_model(model_id):
@@ -157,13 +171,19 @@ def get_fallback_configs(model_id):
 
 
 def _promote_model_to_default(model_id):
-    global _llm_config_cache
     with get_db() as db:
+        # Проверяем, существует ли модель и включена ли
+        model = db.query(LLMModel).filter(LLMModel.id == model_id, LLMModel.enabled == True).first()
+        if not model:
+            log_message("LLM_FALLBACK", f"Ошибка: модель {model_id} не найдена или отключена. Нельзя сделать её основной.")
+            return
+
+        # Сбрасываем is_default у всех
         db.query(LLMModel).filter(LLMModel.is_default == True).update({LLMModel.is_default: False})
+        # Устанавливаем is_default = True для выбранной
         db.query(LLMModel).filter(LLMModel.id == model_id).update({LLMModel.is_default: True})
         db.commit()
-    _llm_config_cache["data"] = None
-    log_message("LLM_FALLBACK", f"Модель {model_id} повышена до основной (is_default=True)")
+        log_message("LLM_FALLBACK", f"Модель {model_id} ({model.model_name}) повышена до основной (is_default=True)")
 
 
 def get_openai_client():
@@ -185,9 +205,16 @@ def get_default_api_key():
 
 
 def _try_single_llm_call(cfg, messages, timeout):
+    import httpx
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    http_client = httpx.Client(verify=ssl_context)
+    
     client = OpenAI(
         api_key=cfg.get("api_key") or "placeholder",
-        base_url=cfg.get("base_url") or "https://bothub.chat/api/v2/openai/v1"
+        base_url=cfg.get("base_url") or "https://bothub.chat/api/v2/openai/v1",
+        http_client=http_client
     )
     return client.chat.completions.create(
         model=cfg.get("model_name") or LLM_MODEL,
@@ -208,20 +235,16 @@ def llm_complete_with_config(messages, timeout=120):
     for attempt, cfg_item in enumerate(configs):
         try:
             response = _try_single_llm_call(cfg_item, messages, timeout)
+            
             if attempt > 0 and cfg_item.get("model_id"):
                 _promote_model_to_default(cfg_item["model_id"])
             return response
         except Exception as e:
             last_error = e
             if attempt < len(configs) - 1:
-                log_message("LLM_FALLBACK", f"{cfg_item.get('model_name')} ошибка: {e}. Пробую fallback...")
+                log_message("LLM_FALLBACK", f"{cfg_item.get('model_name')} ошибка: {e}. Пробую fallback... (URL: {cfg_item.get('base_url')}, API_KEY: {bool(cfg_item.get('api_key'))})")
     raise last_error or Exception("Все LLM-модели недоступны")
 
-
-client = None
-
-check_raw = _system_config.get("check", "yes").strip().lower()
-check_sql = check_raw in ("yes", "true", "1")
 
 DOWNLOADS_DIR = os.environ.get("DOWNLOADS_DIR", "app/downloads").strip()
 DOWNLOADS_DIR = os.path.normpath(DOWNLOADS_DIR)
@@ -242,45 +265,27 @@ except Exception as e:
 
 # =========================
 # DB CONNECTION
-_db_connection_cache = {"text": None, "timestamp": 0}
-
-
-def get_default_connection():
-    now = time.time()
-    if _db_connection_cache["text"] and (now - _db_connection_cache["timestamp"]) < 60:
-        return _db_connection_cache["text"]
-
+# =========================
+def _get_db_config():
     with get_db() as db:
         conn = db.query(ConnectionSetting).filter(ConnectionSetting.is_default == True).first()
         if not conn:
             conn = db.query(ConnectionSetting).first()
         if conn:
-            _db_connection_cache["text"] = {
+            return {
                 "host": conn.host,
                 "database": conn.database_name,
                 "user": conn.username,
                 "password": conn.password,
                 "port": conn.port,
             }
-            _db_connection_cache["timestamp"] = now
-            return _db_connection_cache["text"]
-
-    _db_connection_cache["text"] = {
+    return {
         "host": "host.docker.internal",
         "database": "dash",
         "user": "postgres",
         "password": "secret",
-        "port": 5432,
+        "port": 1111,
     }
-    _db_connection_cache["timestamp"] = now
-    return _db_connection_cache["text"]
-
-
-def _get_db_config():
-    cfg = get_default_connection()
-    if cfg:
-        return cfg
-    raise Exception("Конфигурация БД не задана. Создайте подключение в разделе настроек.")
 
 
 def get_connection():
@@ -300,7 +305,7 @@ def get_connection():
 # DB DESCRIPTION (из system_config -> db_desc)
 # =========================
 def get_db_description():
-    desc = _system_config.get("db_desc", "")
+    desc = get_system_config().get("db_desc", "")
     if desc:
         return desc
     return ""
@@ -405,42 +410,32 @@ def get_current_user_id():
 
 
 # =========================
-# GET SCHEMA — С КЕШИРОВАНИЕМ НА 15 МИНУТ
+# GET SCHEMA
 # =========================
-_schema_cache = {"text": None, "timestamp": 0}
-
-
 def get_schema():
-    global _schema_cache
-    now = time.time()
-    if _schema_cache["text"] and (now - _schema_cache["timestamp"]) < 900:
-        print("[SCHEMA CACHE] Использую кеш", flush=True)
-        return _schema_cache["text"]
     try:
         conn = get_connection()
         cur = conn.cursor()
         query = """
-        SELECT table_name, column_name, data_type
+        SELECT table_schema, table_name, column_name, data_type
         FROM information_schema.columns
-        WHERE table_schema = 'public'
-        ORDER BY table_name, ordinal_position
+        WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+        ORDER BY table_schema, table_name, ordinal_position
         """
         cur.execute(query)
         rows = cur.fetchall()
         if not rows:
             raise Exception("empty schema")
         schema = {}
-        for table, column, dtype in rows:
-            schema.setdefault(table, []).append((column, dtype))
+        for schema_name, table, column, dtype in rows:
+            full_table = f"{schema_name}.{table}" if schema_name != 'public' else table
+            schema.setdefault(full_table, []).append((column, dtype))
         schema_text = ""
         for table, cols in schema.items():
             cols_str = ", ".join([f"{c} ({t})" for c, t in cols])
             schema_text += f"{table}: {cols_str}\n"
         cur.close()
         conn.close()
-        _schema_cache["text"] = schema_text
-        _schema_cache["timestamp"] = now
-        print("[SCHEMA CACHE] Обновил кеш", flush=True)
         return schema_text
     except Exception as e:
         print("SCHEMA ERROR:", str(e), flush=True)
@@ -452,7 +447,7 @@ def get_schema():
 # =========================
 def build_prompt(question, schema_text, db_desc):
     examples = load_examples()
-    prompt_key = _system_config.get("prompt_generate_sql_key", "prompt_generate_sql")
+    prompt_key = get_system_config().get("prompt_generate_sql_key", "prompt_generate_sql")
     messages = build_messages_from_prompt_key(prompt_key, {
         "SCHEMA_TEXT": schema_text,
         "DB_DESC": db_desc,
@@ -496,7 +491,7 @@ def load_examples(limit=None):
 # SQL VALIDATOR
 # ==========================
 def validate_and_fix_sql(question, sql_query, schema_text, db_desc):
-    prompt_key = _system_config.get("prompt_validate_sql_key", "prompt_validate_sql")
+    prompt_key = get_system_config().get("prompt_validate_sql_key", "prompt_validate_sql")
     messages = build_messages_from_prompt_key(prompt_key, {
         "SCHEMA_TEXT": schema_text,
         "DB_DESC": db_desc,
@@ -514,7 +509,7 @@ def validate_and_fix_sql(question, sql_query, schema_text, db_desc):
 # ANALYZE SQL ERROR
 # =========================
 def analyze_sql_error(sql_query, error_text, schema_text, db_desc):
-    prompt_key = _system_config.get("prompt_analyze_sql_key", "prompt_analyze_sql")
+    prompt_key = get_system_config().get("prompt_analyze_sql_key", "prompt_analyze_sql")
     messages = build_messages_from_prompt_key(prompt_key, {
         "SCHEMA_TEXT": schema_text,
         "DB_DESC": db_desc,
@@ -531,13 +526,12 @@ def analyze_sql_error(sql_query, error_text, schema_text, db_desc):
 # EXPLAIN SQL
 # =========================
 def explain_sql(sql_query, schema_text, db_desc):
-    prompt_key = _system_config.get("prompt_explain_sql_key", "prompt_explain_sql")
+    prompt_key = get_system_config().get("prompt_explain_sql_key", "prompt_explain_sql")
     messages = build_messages_from_prompt_key(prompt_key, {
         "SCHEMA_TEXT": schema_text,
         "DB_DESC": db_desc,
         "SQL_QUERY": sql_query
     })
-    log_llm_request(messages)
     log_llm_request(messages)
     response = llm_complete_with_config(messages)
     response_text = response.choices[0].message.content.strip()
@@ -548,7 +542,7 @@ def explain_sql(sql_query, schema_text, db_desc):
 # MODIFY SQL FOR BUSINESS TERMS
 # =========================
 def modify_sql_for_business_terms(sql_query, schema_text, db_desc):
-    prompt_key = _system_config.get("prompt_modify_sql_key", "prompt_modify_sql")
+    prompt_key = get_system_config().get("prompt_modify_sql_key", "prompt_modify_sql")
     messages = build_messages_from_prompt_key(prompt_key, {
         "SCHEMA_TEXT": schema_text,
         "DB_DESC": db_desc,
@@ -630,10 +624,10 @@ def generate_report(schema_text, db_desc, sql_query, df, filepath, chart_paths=N
                 system_text = system_text.replace("{" + k + "}", str(v))
             messages = [{"role": "system", "content": system_text}]
         else:
-            prompt_key = _system_config.get("prompt_report_key", "prompt_report")
+            prompt_key = get_system_config().get("prompt_report_key", "prompt_report")
             messages = build_messages_from_prompt_key(prompt_key, placeholders)
     else:
-        prompt_key = _system_config.get("prompt_report_key", "prompt_report")
+        prompt_key = get_system_config().get("prompt_report_key", "prompt_report")
         messages = build_messages_from_prompt_key(prompt_key, placeholders)
 
     messages.append({
@@ -981,6 +975,38 @@ def log_llm_request(messages):
     print(f"[LLM LOG] Запрос записан в {DOWNLOADS_DIR}", flush=True)
 
 
+def log_user_llm_request(user, question, llm_answer):
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+    log_path = os.path.join(DOWNLOADS_DIR, f"req_{date_str}.txt")
+    entry = (
+        f"Пользователь: {user}\n"
+        f"Дата и время: {now}\n"
+        f"Вопрос: {question}\n"
+        f"Ответ LLM: {llm_answer}\n"
+        "----------------\n"
+    )
+    print(f"[LOG_USER_LLM] Attempting to write to: {log_path}")
+    try:
+        os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(entry)
+        print(f"[LOG_USER_LLM] Written to: {log_path}")
+    except Exception as e:
+        print(f"[LOG_USER_LLM] ERROR: {e}", flush=True)
+
+    # Дополнительно: пишем в llm_*.txt для видимости
+    llm_log_path = os.path.join(DOWNLOADS_DIR, f"llm_{date_str}.txt")
+    _write_log(entry)
+    _write_log(entry)
+    llm_entry = f"[USER REQUEST] {user} | {question}\n[LLM RESPONSE] {llm_answer}\n{'='*60}\n"
+    try:
+        with open(llm_log_path, "a", encoding="utf-8") as f:
+            f.write(llm_entry)
+    except Exception as e:
+        print(f"[LOG_USER_LLM] ERROR writing to llm log: {e}", flush=True)
+
+
 def log_request_response(tag, request_text, response_text):
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     date_str = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -994,19 +1020,6 @@ def log_request_response(tag, request_text, response_text):
     except Exception as e:
         print(f"[REQUESTS LOG ERROR] {e}", flush=True)
     print(f"[REQUESTS LOG] [{tag}] Запись добавлена в {log_path}", flush=True)
-
-
-def refresh_system_config():
-    global _system_config_cache, _system_config
-    _system_config_cache["text"] = None
-    _system_config_cache["timestamp"] = 0
-    _system_config = get_system_config()
-
-
-def refresh_db_connection_cache():
-    global _db_connection_cache
-    _db_connection_cache["text"] = None
-    _db_connection_cache["timestamp"] = 0
 
 
 # =========================

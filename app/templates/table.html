@@ -1,11 +1,38 @@
 {% extends "base.html" %}
 {% block title %}Таблица{% endblock %}
 {% block extra_css %}
-.toolbar { display:flex; gap:8px; margin-bottom:12px; align-items:center; white-space:nowrap; flex-wrap:nowrap; }
-.btn { padding:8px 16px; border-radius:6px; border:none; font-size:13px; cursor:pointer; font-weight:500; transition:.15s; white-space:nowrap; flex-shrink:0; }
-.btn-blue { background:var(--gradient-primary); color:var(--text-on-primary); }
-.btn-blue:hover { opacity:0.85; }
-.table-wrap { overflow:auto; max-height:calc(100vh - 240px); background:var(--card-bg); border:none; border-radius:10px; box-shadow:var(--card-shadow); transition:background-color 0.3s ease; }
+html, body { height:100%; }
+.page-content { display:flex; flex-direction:column; height:calc(100vh - 52px); padding:16px 24px; box-sizing:border-box; }
+.page-content h2 { margin:0 0 8px; flex-shrink:0; }
+.cards { display:flex; gap:16px; margin-bottom:16px; }
+.card { background:var(--card-bg); border:none; border-radius:10px; padding:16px; margin-bottom:16px; box-shadow:var(--card-shadow); transition:background-color 0.3s ease; }
+.chat-messages { flex:1; overflow-y:auto; max-height:calc(100vh - 340px); padding:8px 0; }
+.msg { margin-bottom:12px; padding:10px 14px 36px 14px; border-radius:8px; max-width:85%; font-size:14px; line-height:1.5; position:relative; }
+.msg.user { background:var(--gradient-primary); color:var(--text-on-primary); margin-left:auto; }
+.msg.assistant { background:var(--bg-surface-alt); border:1px solid var(--border-light); color:var(--text-primary); }
+.msg-label { font-size:11px; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; }
+.msg .markdown-content code { background:var(--bg-code); padding:2px 6px; border-radius:3px; font-size:13px; }
+.msg .markdown-content pre { background:var(--bg-pre); padding:12px; border-radius:6px; overflow-x:auto; position:relative; color:var(--text-primary); }
+.msg .markdown-content table { border-collapse:collapse; width:100%; margin:8px 0; }
+.msg .markdown-content th, .msg .markdown-content td { border:1px solid var(--border-table); padding:4px 8px; font-size:12px; }
+.msg .markdown-content th { background:var(--table-header-bg); }
+.sql-preview { background:var(--bg-surface-alt); border:1px solid var(--border-light); border-radius:6px; padding:6px 12px; font-family:monospace; font-size:12px; color:var(--text-code); max-width:500px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.input-area { display:flex; gap:8px; align-items:flex-end; padding-top:12px; border-top:1px solid var(--border-light); }
+.input-area textarea { flex:1; background:var(--bg-input); border:1px solid var(--border-input); border-radius:6px; color:var(--text-primary); padding:10px; font-size:14px; resize:none; min-height:40px; max-height:100px; }
+.input-area textarea:focus { border-color:var(--border-input-focus); box-shadow:0 0 0 0.2rem rgba(13,110,253,0.15); outline:none; }
+.mic-btn { width:40px; height:40px; border-radius:8px; border:1px solid var(--border-input); background:var(--bg-input); color:var(--text-accent); cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; }
+.mic-btn.recording { background:var(--gradient-danger); border-color:var(--gradient-danger); color:var(--text-on-primary); animation:pulse 1.5s infinite; }
+@keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(220,53,69,.5)} 70%{box-shadow:0 0 0 10px rgba(220,53,69,0)} 100%{box-shadow:0 0 0 0 rgba(220,53,69,0)} }
+.typing { display:flex; gap:4px; padding:10px; }
+.typing span { width:8px; height:8px; background:var(--color-typing-dot); border-radius:50%; animation:typing 1s infinite; }
+.typing span:nth-child(2) { animation-delay:.2s; }
+.typing span:nth-child(3) { animation-delay:.4s; }
+@keyframes typing { 0%,100%{opacity:.2} 50%{opacity:1} }
+.table-toolbar { display:flex; gap:8px; margin-bottom:8px; align-items:center; white-space:nowrap; flex-wrap:nowrap; flex-shrink:0; }
+.table-toolbar .btn { padding:8px 16px; border-radius:6px; border:none; font-size:13px; cursor:pointer; font-weight:500; transition:.15s; white-space:nowrap; flex-shrink:0; }
+.table-toolbar .btn-blue { background:var(--gradient-primary); color:var(--text-on-primary); }
+.table-toolbar .btn-blue:hover { opacity:0.85; }
+.table-wrap { overflow:auto; max-height:40%; background:var(--card-bg); border:none; border-radius:10px; box-shadow:var(--card-shadow); transition:background-color 0.3s ease; }
 .table-wrap table { border-collapse:collapse; font-size:13px; width:100%; }
 .table-wrap th { background:var(--table-header-bg); color:var(--text-secondary); font-weight:600; padding:8px 12px; border-bottom:2px solid var(--table-header-border); position:sticky; top:0; z-index:1; cursor:pointer; }
 .table-wrap th:hover { background:var(--bg-surface-alt); }
@@ -15,8 +42,13 @@
 {% endblock %}
 
 {% block content %}
-<h2 style="color:var(--text-accent); margin-bottom:12px;">Работа с таблицей</h2>
-<div class="toolbar">
+<div class="page-content">
+<div class="cards">
+    <div style="flex:1"><h2 style="color:var(--text-accent);font-size:18px;margin:0 0 4px 0;">Таблица</h2><span style="color:var(--text-muted);font-size:12px;">Данные из SQL</span></div>
+    <div><span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;">SQL</span><div class="sql-preview" id="sqlPreview" title="{{ sql_query }}">{{ sql_query[:80] if sql_query else '' }}{% if sql_query and sql_query|length > 80 %}...{% endif %}</div></div>
+</div>
+
+<div class="table-toolbar">
     <button class="btn btn-blue" onclick="addRow()">+ Строка</button>
     <button class="btn btn-blue" onclick="addCol()">+ Колонка</button>
     <button class="btn btn-blue" onclick="delRow()">− Строка</button>
@@ -29,14 +61,37 @@
     <table id="dataTable"><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table>
     <div id="emptyMsg" style="text-align:center;color:var(--text-muted);padding:40px;">Нет данных. Откройте эту страницу из режима чата после выполнения SQL-запроса.</div>
 </div>
+
+<div class="card" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="input-area">
+        <button class="mic-btn" id="micBtn" title="Голосовой ввод">🎤</button>
+        <textarea id="chatInput" placeholder="Задайте вопрос по данным таблицы..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ask();}"></textarea>
+        <button class="btn" id="askBtn" onclick="ask()" style="height:40px; background:var(--gradient-primary); color:var(--text-on-primary); border:none; border-radius:6px; padding:8px 20px; cursor:pointer; font-weight:500;">Спросить</button>
+    </div>
+</div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-let cols = [], rows = [];
-function load() { const d = localStorage.getItem('chatTableData'); if (d) { const p = JSON.parse(d); cols = p.columns||[]; rows = p.rows||[]; } render(); }
-function save() { localStorage.setItem('chatTableData', JSON.stringify({columns:cols, rows:rows})); }
+var cols = {{ columns|tojson }}, rows = {{ rows|tojson }}, history = [];
+var sqlQuery = {{ sql_query|tojson }} || "";
+var lastSqlResult = null;
+var lastAssistantTexts = {};
+
+function load() {
+    if (!cols.length || !rows.length) {
+        const d = localStorage.getItem('chatTableData');
+        if (d) { const p = JSON.parse(d); cols = p.columns||[]; rows = p.rows||[]; sqlQuery = p.sql_query||''; }
+    }
+    render();
+    if (sqlQuery) {
+        const preview = document.getElementById('sqlPreview');
+        if (preview) preview.textContent = sqlQuery.substring(0,80);
+    }
+}
+function save() { localStorage.setItem('chatTableData', JSON.stringify({columns:cols, rows:rows, sql_query:sqlQuery})); }
 function render() { const th = document.getElementById('tableHead'), tb = document.getElementById('tableBody'), em = document.getElementById('emptyMsg'), dt = document.getElementById('dataTable'); if (!cols.length) { em.style.display='block'; dt.style.display='none'; updateCount(); return; } em.style.display='none'; dt.style.display='table'; th.innerHTML = '<tr>'+cols.map((c,i)=>`<th contenteditable="true" onblur="cols[${i}]=this.textContent.trim();save();">${c}</th>`).join('')+'</tr>'; tb.innerHTML = rows.map((r,ri)=>'<tr>'+cols.map((_,ci)=>`<td contenteditable="true" onblur="updateCell(${ri},${ci},this.textContent)">${r[ci]!==null&&r[ci]!==undefined?String(r[ci]):''}</td>`).join('')+'</tr>').join(''); updateCount(); save(); }
 function updateCell(r,c,v) { let val = v.trim(); if (val===''||val.toLowerCase()==='null') rows[r][c]=null; else if (!isNaN(val)&&val!=='') rows[r][c]=val.includes('.')?parseFloat(val):parseInt(val); else rows[r][c]=val; save(); }
 function updateCount() { document.getElementById('rowCount').textContent = `${rows.length} строк, ${cols.length} колонок`; }
@@ -44,8 +99,157 @@ function addRow() { if(!cols.length) return alert('Добавьте колонк
 function addCol() { const n=prompt('Название колонки:','col_'+(cols.length+1)); if(n){cols.push(n.trim());rows.forEach(r=>r.push(null));render();} }
 function delRow() { if(rows.length&&confirm('Удалить последнюю строку?')){rows.pop();render();} }
 function delCol() { if(cols.length&&confirm('Удалить колонку "'+cols[cols.length-1]+'"?')){cols.pop();rows.forEach(r=>r.pop());render();} }
-function openGraf() { window.open('/graf?table_mode=1', '_blank'); }
+async function openGraf() {
+    if (cols.length && rows.length) {
+        localStorage.setItem('chatTableData', JSON.stringify({sql_query: sqlQuery, columns: cols, rows: rows}));
+        await fetch('/api/save_result', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql: '', columns: cols, rows: rows})});
+    }
+    window.open('/graf?table_mode=1', '_blank');
+}
 function exportExcel() { if(!cols.length||!rows.length) return alert('Нет данных'); const wb=XLSX.utils.book_new();wb.SheetNames.push('Data'); wb.Sheets.Data=XLSX.utils.aoa_to_sheet([cols,...rows]); XLSX.writeFile(wb,'table.xlsx'); }
+
+function addMsg(role, content, isHtml, msgId) {
+    const c = document.getElementById('chatMessages'); const d = document.createElement('div'); d.className='msg '+role;
+    if (msgId) d.id = msgId;
+    if (role==='assistant') { const l=document.createElement('div'); l.className='msg-label'; l.textContent='Ассистент'; d.appendChild(l); }
+    const t = document.createElement('div');
+    if (isHtml) { t.className='markdown-content'; t.innerHTML=content;
+        t.querySelectorAll('pre code').forEach(block => {
+            const pre = block.parentElement;
+            const actions = document.createElement('div'); actions.className='code-actions';
+            const runBtn = document.createElement('button'); runBtn.className='run-action'; runBtn.innerHTML='▶ Выполнить';
+            runBtn.onclick = async () => {
+                runBtn.textContent='...'; runBtn.disabled=true;
+                const existing = pre.parentElement.querySelector('.code-result');
+                if (existing) existing.remove();
+                try {
+                    const r = await fetch('/execute_sql_ajax',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql_query:block.textContent})});
+                    const d = await r.json();
+                    if (d.status==='ok' && d.rows && d.rows.length) {
+                        sqlQuery=block.textContent;
+                        const preview = document.getElementById('sqlPreview');
+                        if (preview) preview.textContent=sqlQuery.substring(0,80);
+                        updateSqlData(d);
+                        localStorage.setItem('chatTableData', JSON.stringify({sql_query: block.textContent, columns: d.columns, rows: d.rows}));
+                        fetch('/api/save_result', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql: block.textContent, columns: d.columns, rows: d.rows})});
+                        const resultDiv = document.createElement('div'); resultDiv.className='code-result';
+                        let html = '<div class="result-info">Строк: '+d.count+'</div><table><thead><tr>';
+                        d.columns.forEach(c => html += '<th>'+c+'</th>');
+                        html += '</tr></thead><tbody>';
+                        d.rows.slice(0, 100).forEach(row => { html += '<tr>'; row.forEach(v => html += '<td>'+(v!==null&&v!==undefined?v:'')+'</td>'); html += '</tr>'; });
+                        html += '</tbody></table>';
+                        if (d.rows.length > 100) html += '<div class="result-info">Показано 100 из '+d.count+' строк</div>';
+                        resultDiv.innerHTML = html;
+                        pre.parentElement.appendChild(resultDiv);
+                    } else if (d.status==='ok') {
+                        const resultDiv = document.createElement('div'); resultDiv.className='code-result';
+                        resultDiv.innerHTML = '<div class="result-info">Запрос выполнен. Строк: 0</div>';
+                        pre.parentElement.appendChild(resultDiv);
+                    } else {
+                        const resultDiv = document.createElement('div'); resultDiv.className='code-result';
+                        resultDiv.innerHTML = '<div style="color:var(--text-error);font-size:13px;">Ошибка: '+d.message+'</div>';
+                        pre.parentElement.appendChild(resultDiv);
+                    }
+                } catch(e) {
+                    const resultDiv = document.createElement('div'); resultDiv.className='code-result';
+                    resultDiv.innerHTML = '<div style="color:var(--text-error);font-size:13px;">Ошибка: '+e+'</div>';
+                    pre.parentElement.appendChild(resultDiv);
+                }
+                runBtn.innerHTML='▶ Выполнить'; runBtn.disabled=false;
+            };
+            actions.appendChild(runBtn);
+            const copyBtn = document.createElement('button'); copyBtn.innerHTML='📋 Скопировать';
+            copyBtn.onclick = () => { navigator.clipboard.writeText(block.textContent); copyBtn.textContent='✓'; setTimeout(()=>{ copyBtn.innerHTML='📋 Скопировать'; },2000); };
+            actions.appendChild(copyBtn);
+            pre.parentElement.insertBefore(actions, pre.nextSibling);
+        });
+        const msgId = d.id || ('msg_'+Date.now()+'_'+Math.random().toString(36).slice(2,8));
+        if (!d.id) d.id = msgId;
+        if (role==='assistant') {
+            const saveBtn = document.createElement('button'); saveBtn.className='save-btn'; saveBtn.innerHTML='⬇️ Скачать';
+            saveBtn.onclick = () => { lastAssistantTexts[currentSaveTarget] = { html: content, text: stripHtml(content), id: msgId }; currentSaveTarget = msgId; openSaveModal(); };
+            d.appendChild(saveBtn);
+        }
+    } else { t.textContent=content; }
+    d.appendChild(t); c.appendChild(d); c.scrollTop=c.scrollHeight;
+    if (role==='assistant' && msgId) lastAssistantTexts[msgId] = { html: isHtml?content:'', text: content, id: msgId };
+    return d;
+}
+function stripHtml(html) { const tmp = document.createElement('div'); tmp.innerHTML = html; return tmp.textContent || tmp.innerText || ''; }
+var currentSaveTarget = null;
+function openSaveModal() { document.getElementById('saveModal').style.display = 'flex'; }
+function closeSaveModal() { document.getElementById('saveModal').style.display = 'none'; }
+async function saveOutput(format) {
+    closeSaveModal();
+    const data = lastAssistantTexts[currentSaveTarget];
+    if (!data) return;
+    const text = data.text || '';
+    const html = data.html || '';
+    if (format === 'text') {
+        const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+        downloadBlob(blob, 'table_chat_'+new Date().toISOString().slice(0,10)+'.txt');
+    } else if (format === 'word') {
+        try {
+            const r = await fetch('/save_chat_output', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content: html, format: 'docx'})});
+            const d = await r.json();
+            if (d.status === 'ok') window.open(d.url, '_blank');
+            else alert(d.message);
+        } catch(e) { alert('Ошибка: '+e); }
+    } else if (format === 'excel') {
+        if (!lastSqlResult || !lastSqlResult.columns || !lastSqlResult.columns.length || !lastSqlResult.rows) {
+            alert('Нет данных таблицы для экспорта в Excel.');
+            return;
+        }
+        const wb = XLSX.utils.book_new();
+        const wsData = [lastSqlResult.columns.slice()];
+        lastSqlResult.rows.forEach(function(row) { wsData.push(row.slice()); });
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Table_Result');
+        XLSX.writeFile(wb, 'table_result_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    }
+}
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+function addTyping() { const d=addMsg('assistant',''); d.className+=' loading-msg'; const ty=document.createElement('div'); ty.className='typing'; ty.innerHTML='<span></span><span></span><span></span>'; d.querySelector('.msg-label').after(ty); return d; }
+function updateSqlData(data) { if (!data.rows||!data.rows.length) return; let t = data.columns.join(' | ')+'\n'+data.columns.map(()=>'---').join(' | ')+'\n'; data.rows.slice(0,50).forEach(r => t += r.join(' | ')+'\n'); lastSqlResult = {columns:data.columns, rows:data.rows, text:t}; }
+async function ask() {
+    const inp = document.getElementById('chatInput'); const q = inp.value.trim(); if (!q) return;
+    addMsg('user', q); inp.value=''; document.getElementById('askBtn').disabled=true;
+    const typing = addTyping();
+    try { const r = await fetch('/table_chat_ask', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q, table_columns:cols, table_rows:rows, history:history})}); const d = await r.json(); typing.remove(); if (d.status==='ok') { const mid = 'msg_'+Date.now()+'_'+Math.random().toString(36).slice(2,8); addMsg('assistant', d.answer, true, mid); history.push({role:'user',content:q},{role:'assistant',content:d.answer_raw}); currentSaveTarget = mid; } else addMsg('assistant', 'Ошибка: '+d.message,false); }
+    catch(e) { typing.remove(); addMsg('assistant', 'Ошибка соединения: '+e,false); }
+    document.getElementById('askBtn').disabled=false;
+}
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+var recognition = null, isRecording = false, fullVoiceText = '';
+async function requestMic() { try { const s = await navigator.mediaDevices.getUserMedia({audio:true}); s.getTracks().forEach(t=>t.stop()); return true; } catch(e) { return false; } }
+document.getElementById('micBtn').onclick = async function() {
+    if (!SpeechRecognition) { alert('Web Speech API не поддерживается'); return; }
+    if (isRecording) { isRecording=false; if(recognition) recognition.stop(); this.classList.remove('recording'); return; }
+    if (!await requestMic()) { alert('Доступ к микрофону запрещён'); return; }
+    recognition = new SpeechRecognition(); recognition.lang='ru-RU'; recognition.interimResults=true; recognition.continuous=true;
+    let silence; function resetSilence(){clearTimeout(silence);silence=setTimeout(()=>recognition.stop(),7000);}
+    recognition.onresult = function(e) { resetSilence(); let f='', inter=''; for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)f+=e.results[i][0].transcript;else inter+=e.results[i][0].transcript;} if(f){fullVoiceText+=' '+f;document.getElementById('chatInput').value=fullVoiceText.trim();} else document.getElementById('chatInput').value=fullVoiceText.trim()+' '+inter; };
+    recognition.onend = () => { if(isRecording) setTimeout(()=>{try{recognition.start();resetSilence();}catch(e){}},400); };
+    try { recognition.start(); resetSilence(); isRecording=true; this.classList.add('recording'); fullVoiceText = document.getElementById('chatInput').value; } catch(e) { console.error(e); }
+};
 load();
 </script>
+<div id="saveModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-surface);border-radius:12px;padding:24px;max-width:400px;width:90%;box-shadow:var(--shadow-btn);text-align:center;">
+        <h3 style="color:var(--text-accent);margin:0 0 12px;">💾 Сохранить ответ</h3>
+        <p style="color:var(--text-secondary);font-size:13px;margin:0 0 16px;">Выберите формат для сохранения:</p>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            <button onclick="saveOutput('word')" style="background:var(--gradient-primary);color:#fff;border:none;padding:12px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;">📝 Word (.docx)</button>
+            <button onclick="saveOutput('text')" style="background:var(--gradient-chart);color:#fff;border:none;padding:12px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;">📄 Текст (.txt)</button>
+            <button onclick="saveOutput('excel')" style="background:var(--gradient-success);color:#fff;border:none;padding:12px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;">📊 Excel (.xlsx)</button>
+        </div>
+        <button onclick="closeSaveModal()" style="margin-top:12px;background:transparent;color:var(--text-muted);border:1px solid var(--border-light);padding:8px 20px;border-radius:6px;cursor:pointer;font-size:12px;">Отмена</button>
+    </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 {% endblock %}
